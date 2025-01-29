@@ -10,10 +10,9 @@ In order to flexibly add offline capabilities we are proposing the following str
 
 ```mermaid
 graph TD
-  FA[Feathers API] -->|Events| SN[Snapshot Server]
-  SN <-->|Syncs| AS[Sync Server]
+  FA[Feathers API/Database] -->|Events/Logs| SN[Snapshot Server]
+  SN <-->|Syncs| C1
   C1[Client] -->|Creates Snapshot| SN
-  AS <-->|Syncs| C1
   SN --> |Updates| FA
 ```
 
@@ -31,3 +30,6 @@ This is a basic [Automerge Sync Server](https://automerge.org/) that synchronize
 
 ## Alternatives
 
+Several local-first synchronization options were evaluated, however, most rely on (Postgre)SQL or paid infrastructure.
+
+<img width="1821" alt="local-first-projects" src="https://github.com/user-attachments/assets/85c9fa2a-f0b9-4506-af71-1f02d510d1e7" />
