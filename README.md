@@ -33,3 +33,8 @@ This is a basic [Automerge Sync Server](https://automerge.org/) that synchronize
 Several local-first synchronization options were evaluated, however, most rely on (Postgre)SQL or paid infrastructure.
 
 <img width="1821" alt="local-first-projects" src="https://github.com/user-attachments/assets/85c9fa2a-f0b9-4506-af71-1f02d510d1e7" />
+
+## Limitations
+
+- Soft delete
+- Run hooks (keep separate snapshot of server "view" and client changes)
