@@ -1,5 +1,31 @@
 # Feathers Offline Synchronization
 
+## Example
+
+This repository contains an example for a Feathers API with full offline-first capabilities. To try it run
+
+```sh
+npm install
+cd frontend
+npm run dev
+```
+
+Then go to [localhost:5173](http://localhost:5173). This will initialize a new repository and add the link to the hash.
+Copy the URL to collaborate on this todo list. To open an existing list go to:
+
+[http://localhost:5173/#automerge:3vrUzv7r6MnQeuyoA8CzXByExwHY](http://localhost:5173/#automerge:3vrUzv7r6MnQeuyoA8CzXByExwHY).
+
+### Sync server
+
+By default the frontend does not require any backend and uses the development sync server from [automerge.org](https://automerge.org/). To use your own sync server, in addition to the frontend, run
+
+```sh
+cd sync-server
+npm start
+```
+
+And change `SYNC_SERVER_URL` in `frontend/src/feathers/app.ts` to `ws://localhost:5050`
+
 ## Goal
 
 The goal of this project is to add full offline-first capabilities to a Feathers API.
