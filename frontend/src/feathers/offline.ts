@@ -4,9 +4,6 @@ export type ServiceDataDocument<T> = {
   [key: string]: T & { id: string}
 }
 
-const CREATE_OR_PATCH = 6
-const DELETE = 1
-
 export class AutomergeService<T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<ServiceDataDocument<T>>
@@ -80,23 +77,23 @@ export class AutomergeService<T> {
   }
 
   setup() {
-    this.handle.on('change', ({ patches, patchInfo }) => {
-      const id = patches[0]?.path[0]
+    this.handle.on('change', ({ patches, patchInfo,  }) => {
+      const { before, after } = patchInfo
 
-      if (!id) {
+      if (Object.keys(before).length === 0) {
         return
       }
 
-      if (patches.length === CREATE_OR_PATCH) {
-        if (patchInfo.before[id]) {
-          (this as any).emit('patched', patchInfo.after[id])
-        } else {
-          (this as any).emit('created', patchInfo.after[id])
-        }
-      }
+      const ids = new Set(patches.map((patch) => patch.path[0]))
 
-      if (patches.length === DELETE) {
-        (this as any).emit('removed', patchInfo.before[id])
+      for (const id of ids) {
+        if (!before[id]) {
+          (this as any).emit('created', after[id])
+        } else if (!after[id]) {
+          (this as any).emit('removed', before[id])
+        } else if (before[id]) {
+          (this as any).emit('patched', after[id])
+        }
       }
     })
   }
