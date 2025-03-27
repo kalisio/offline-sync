@@ -73,7 +73,7 @@ export class Server {
       return true;
     }
 
-    return new Promise((resolve) => {
+    return new Promise<boolean>((resolve) => {
       this.#readyResolvers.push(resolve);
     });
   }

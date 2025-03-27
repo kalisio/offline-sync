@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { app, type TodoItem } from '../feathers/app'
+import { app, type TodoItem } from '../feathers'
 
 const newTodo = ref('')
 const todos = ref<TodoItem[]>([])

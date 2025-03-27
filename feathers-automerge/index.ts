@@ -1,7 +1,10 @@
-import type { DocHandle } from "@automerge/automerge-repo"
+import type { AnyDocumentId, DocHandle } from "@automerge/automerge-repo"
+import { Repo } from '@automerge/automerge-repo'
+import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket'
+import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
 
 export type ServiceDataDocument<T> = {
-  [key: string]: T & { id: string}
+  [key: string]: T & { id: string }
 }
 
 export class AutomergeService<T> {
@@ -97,4 +100,19 @@ export class AutomergeService<T> {
       }
     })
   }
+}
+
+export function createBrowserRepo(wsUrl: string) {
+  return new Repo({
+    network: [new BrowserWebSocketClientAdapter(wsUrl)],
+    storage: new IndexedDBStorageAdapter()
+  })
+}
+
+export function getDocumentHandle<T>(repo: Repo, docId?: AnyDocumentId) {
+  if (docId) {
+    return repo.find<ServiceDataDocument<T>>(docId);
+  }
+  
+  return repo.create<ServiceDataDocument<T>>({});
 }

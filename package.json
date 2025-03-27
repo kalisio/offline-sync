@@ -10,9 +10,9 @@
     "server",
     "sync-server",
     "frontend",
-    "feathers-offline"
+    "feathers-automerge"
   ],
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "Kalisio",
+  "license": "MIT"
 }

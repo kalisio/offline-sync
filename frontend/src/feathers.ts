@@ -1,10 +1,7 @@
 import { feathers } from '@feathersjs/feathers'
-import { Repo } from '@automerge/automerge-repo'
-import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket'
-import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
-import { AutomergeService, type ServiceDataDocument } from './offline'
+import { AutomergeService, createBrowserRepo, type ServiceDataDocument } from 'feathers-automerge'
 
-const SYNC_SERVER_URL = 'wss://sync.automerge.org' // 'ws://localhost:5050'
+const SYNC_SERVER_URL = 'ws://localhost:5050' // 'wss://sync.automerge.org'
 
 export type Todo = {
   title: string;
@@ -14,6 +11,8 @@ export type Todo = {
 export type TodoItem = Todo & {
   id: string
 }
+
+const repo = createBrowserRepo(SYNC_SERVER_URL)
 
 function getHandle() {
   if (window.location.hash) {
@@ -25,10 +24,6 @@ function getHandle() {
   }
 }
 
-const repo = new Repo({
-  network: [new BrowserWebSocketClientAdapter(SYNC_SERVER_URL)],
-  storage: new IndexedDBStorageAdapter()
-})
 const handle = getHandle()
 
 type TodoService = AutomergeService<Todo>
