@@ -53,12 +53,6 @@ export class AutomergeService<T> {
 
   async create(data: T) {
     const id = data[this.idField] || this.idGenerator()
-    const doc = await this.handle.doc()
-
-    // Check if the item already exists
-    if (doc && doc[id]) {
-      return doc[id]
-    }
     
     const item = {
       [this.idField]: id,
@@ -79,14 +73,9 @@ export class AutomergeService<T> {
       ...data
     }
 
-    // Check if the patched object is different from the original item
-    const isChanged = Object.keys(data).some(key => item[key] !== data[key])
-    
-    if (isChanged) {
-      this.handle.change((doc) => {
-        doc[id] = patched
-      })
-    }
+    this.handle.change((doc) => {
+      doc[id] = patched
+    })
 
     return patched
   }

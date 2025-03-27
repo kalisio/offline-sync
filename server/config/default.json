@@ -6,9 +6,6 @@
     "http://localhost:3030",
     "http://localhost:5137"
   ],
-  "paginate": {
-    "default": 10,
-    "max": 50
-  },
+  "paginate": false,
   "mongodb": "mongodb://127.0.0.1:27017/server"
 }

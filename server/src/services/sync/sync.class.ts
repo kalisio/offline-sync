@@ -24,7 +24,7 @@ export class SyncService<ServiceParams extends Params = SyncParams> extends Mong
 
 export const getOptions = (app: Application): MongoDBAdapterOptions => {
   return {
-    paginate: false,
+    paginate: app.get('paginate'),
     Model: app.get('mongodbClient').then(db => db.collection('sync'))
   }
 }

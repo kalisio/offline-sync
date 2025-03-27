@@ -1,5 +1,6 @@
 // For more information about this file see https://dove.feathersjs.com/guides/cli/service.html
 
+import { ObjectId } from 'mongodb'
 import type { Application } from '../../declarations'
 import { TodosService, getOptions } from './todos.class'
 
@@ -26,7 +27,15 @@ export const todos = (app: Application) => {
       all: [],
       find: [],
       get: [],
-      create: [],
+      create: [
+        async (context) => {
+          const { data } = context
+          if (data._id) {
+            data._id = new ObjectId(data._id)
+            console.log(data.id)
+          }
+        }
+      ],
       patch: [],
       remove: []
     },

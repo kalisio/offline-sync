@@ -121,25 +121,48 @@ export class Server {
           .catch(e => console.error(e))
       })
 
-      serverClient.service(sync.service).on('created', (todo) =>{
-        console.log('Server create', todo)
-        automergeApp.service(sync.service)
-          .create(todo)
-          .catch(e => console.error(e))
+      serverClient.service(sync.service).on('created', async (data) =>{
+        const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
+        const doc = await service.handle.doc()
+
+        console.log('Server create', data)
+
+        if (data && doc && !doc[data._id]) {
+          automergeApp.service(sync.service)
+            .create(data)
+            .catch(e => console.error(e))
+        }
       })
 
-      serverClient.service(sync.service).on('patched', (todo) => {
-        console.log('Server patch', todo)
-        automergeApp.service(sync.service)
-          .patch(todo._id, todo)
-          .catch(e => console.error(e))
+      serverClient.service(sync.service).on('patched', async (data) => {
+        const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
+        const doc = await service.handle.doc()
+
+        console.log('Server patch', data)
+
+        if (doc) {
+          // Check if doc[data._id] is different than data
+          const isChanged = Object.keys(data).some(key => doc[data._id][key] !== data[key])
+
+          if (isChanged) {
+            automergeApp.service(sync.service)
+              .patch(data._id, data)
+              .catch(e => console.error(e))
+          }
+        }
       })
 
-      serverClient.service(sync.service).on('removed', (todo) => {
-        console.log('Server remove', todo)
-        automergeApp.service(sync.service)
-          .remove(todo._id)
-          .catch(e => console.error(e))
+      serverClient.service(sync.service).on('removed', async (data) => {
+        const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
+        const doc = await service.handle.doc()
+
+        console.log('Server remove', data)
+
+        if (doc && doc[data._id]) {
+          automergeApp.service(sync.service)
+            .remove(data._id)
+            .catch(e => console.error(e))
+        }
       })
 
       await automergeApp.setup()
