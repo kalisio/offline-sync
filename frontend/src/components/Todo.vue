@@ -7,6 +7,7 @@ const todos = ref<TodoItem[]>([])
 
 onMounted(async () => {
   const result = await app.service('todos').find()
+  console.log(result)
   todos.value = result
 })
 

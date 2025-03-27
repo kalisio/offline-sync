@@ -15,13 +15,7 @@ export type TodoItem = Todo & {
 const repo = createBrowserRepo(SYNC_SERVER_URL)
 
 function getHandle() {
-  if (window.location.hash) {
-    return repo.find<ServiceDataDocument<Todo>>((window.location as any).hash.slice(1));
-  } else {
-    const newRepo = repo.create<ServiceDataDocument<Todo>>({});
-    window.location.hash = newRepo.url;
-    return newRepo
-  }
+  return repo.find<ServiceDataDocument<Todo>>('automerge:3eVy2cWzctLdMit6HmGCPuv1UYMK' as any);
 }
 
 const handle = getHandle()

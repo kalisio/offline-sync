@@ -1,24 +1,33 @@
 // @ts-check
 import fs from 'fs';
+import os from 'os';
 import http from 'http';
 import express from 'express';
 import { WebSocketServer } from 'ws';
-import { Repo } from '@automerge/automerge-repo';
+import { Repo, AnyDocumentId } from '@automerge/automerge-repo';
 import { NodeWSServerAdapter } from '@automerge/automerge-repo-network-websocket';
 import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs';
-import os from 'os';
+import { feathers } from '@feathersjs/feathers'
+import socketio from '@feathersjs/socketio-client'
+import io from 'socket.io-client'
+import { AutomergeService, ServiceDataDocument } from 'feathers-automerge';
+
+const socket = io('http://localhost:3030')
+const serverClient = feathers()
+
+// Set up Socket.io client with the socket
+serverClient.configure(socketio(socket))
 
 export class Server {
-  /** @type WebSocketServer */
-  #socket;
+  #socket: WebSocketServer;
 
-  /** @type ReturnType<import("express").Express["listen"]> */
-  #server;
+  #server: ReturnType<express.Express['listen']>;
 
-  /** @type {((value: any) => void)[]} */
-  #readyResolvers = [];
+  #readyResolvers: ((value: boolean) => void)[] = [];
 
   #isReady = false;
+
+  #repo: Repo;
 
   constructor() {
     const dir = '../data';
@@ -34,25 +43,21 @@ export class Server {
       process.env.PORT !== undefined ? parseInt(process.env.PORT) : 5050;
 
     const app = express();
-    app.use(express.static('../svelte-chat/dist'));
 
     const config = {
       network: [new NodeWSServerAdapter(this.#socket)],
       storage: new NodeFSStorageAdapter(dir),
       /** @ts-ignore @type {(import("@automerge/automerge-repo").PeerId)}  */
-      peerId: `storage-server-${hostname}`,
+      peerId: `storage-server-${hostname}` as PeerId,
       // Since this is a server, we don't share generously — meaning we only sync documents they already
       // know about and can ask for by ID.
       sharePolicy: async () => false
     };
-    const serverRepo = new Repo(config);
+    
+    this.#repo = new Repo(config);
 
     app.get('/', (req, res) => {
       res.send(`👍 @automerge/example-sync-server is running`);
-    });
-
-    app.get('/metrics', (req, res) => {
-      res.json(serverRepo.metrics());
     });
 
     this.#server = http.createServer(app).listen(PORT, () => {
@@ -66,6 +71,50 @@ export class Server {
         this.#socket.emit('connection', socket, request);
       });
     });
+
+    this.setupSyncRepos()
+  }
+
+  async setupSyncRepos() {
+    type SyncData = {
+      data: { service: string, channel: string, url: string }[]
+    }
+
+    let { data: syncs }: SyncData = await serverClient.service('sync').find()
+
+    await this.ready();
+
+    if (syncs.length === 0) {
+      syncs = [
+        await serverClient.service('sync').create({
+          service: 'todos',
+          channel: 'default',
+          url: this.#repo.create({}).url
+        })
+      ]
+    }
+
+    for (const sync of syncs) {
+      const handle = this.#repo.find<ServiceDataDocument<any>>(sync.url as AnyDocumentId)
+      const automergeService = new AutomergeService<any>(handle)
+      const automergeApp = feathers().use(sync.service, automergeService)
+
+      automergeApp.service(sync.service).on('created', todo => {
+        // serverClient.service(sync.service).create(todo)
+      })
+
+      serverClient.service(sync.service).on('created', (todo) =>{
+        automergeApp.service(sync.service).create(todo)
+      })
+      serverClient.service(sync.service).on('patched', (todo) => {
+        automergeApp.service(sync.service).patch(todo._id, todo)
+      })
+      serverClient.service(sync.service).on('removed', (todo) => {
+        automergeApp.service(sync.service).remove(todo._id)
+      })
+
+      await automergeApp.setup()
+    }
   }
 
   async ready() {

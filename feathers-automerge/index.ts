@@ -79,7 +79,7 @@ export class AutomergeService<T> {
     return Object.values(doc)
   }
 
-  setup() {
+  async setup() {
     this.handle.on('change', ({ patches, patchInfo,  }) => {
       const { before, after } = patchInfo
 
