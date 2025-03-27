@@ -12,7 +12,9 @@ import socketio from '@feathersjs/socketio-client'
 import io from 'socket.io-client'
 import { AutomergeService, ServiceDataDocument } from 'feathers-automerge';
 
-const socket = io('http://localhost:3030')
+const socket = io('http://localhost:3030', {
+  transports: ['websocket']
+})
 const serverClient = feathers()
 
 // Set up Socket.io client with the socket
@@ -76,11 +78,9 @@ export class Server {
   }
 
   async setupSyncRepos() {
-    type SyncData = {
-      data: { service: string, channel: string, url: string }[]
-    }
+    type Sync = { service: string, channel: string, url: string }
 
-    let { data: syncs }: SyncData = await serverClient.service('sync').find()
+    let syncs: Sync[] = await serverClient.service('sync').find()
 
     await this.ready();
 
@@ -92,6 +92,7 @@ export class Server {
           url: this.#repo.create({}).url
         })
       ]
+      console.log('Setting up sync service information', syncs)
     }
 
     for (const sync of syncs) {
@@ -100,17 +101,45 @@ export class Server {
       const automergeApp = feathers().use(sync.service, automergeService)
 
       automergeApp.service(sync.service).on('created', todo => {
-        // serverClient.service(sync.service).create(todo)
+        console.log('Automerge app create', todo)
+        serverClient.service(sync.service)
+          .create(todo)
+          .catch(e => console.error(e))
+      })
+
+      automergeApp.service(sync.service).on('patched', todo => {
+        console.log('Automerge app patch', todo)
+        serverClient.service(sync.service)
+          .patch(todo._id, todo)
+          .catch(e => console.error(e))
+      })
+
+      automergeApp.service(sync.service).on('removed', todo => {
+        console.log('Automerge app remove', todo)
+        serverClient.service(sync.service)
+          .remove(todo._id)
+          .catch(e => console.error(e))
       })
 
       serverClient.service(sync.service).on('created', (todo) =>{
-        automergeApp.service(sync.service).create(todo)
+        console.log('Server create', todo)
+        automergeApp.service(sync.service)
+          .create(todo)
+          .catch(e => console.error(e))
       })
+
       serverClient.service(sync.service).on('patched', (todo) => {
-        automergeApp.service(sync.service).patch(todo._id, todo)
+        console.log('Server patch', todo)
+        automergeApp.service(sync.service)
+          .patch(todo._id, todo)
+          .catch(e => console.error(e))
       })
+
       serverClient.service(sync.service).on('removed', (todo) => {
-        automergeApp.service(sync.service).remove(todo._id)
+        console.log('Server remove', todo)
+        automergeApp.service(sync.service)
+          .remove(todo._id)
+          .catch(e => console.error(e))
       })
 
       await automergeApp.setup()

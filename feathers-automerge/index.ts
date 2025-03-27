@@ -4,15 +4,41 @@ import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
 
 export type ServiceDataDocument<T> = {
-  [key: string]: T & { id: string }
+  [key: string]: T & { [key: string]: string }
+}
+
+export type IdGenerator = () => string
+
+export interface AutomergeServiceOptions {
+  idField?: string
+  idGenerator?: IdGenerator
+}
+
+// MongoDB ObjectId-like generator
+export function generateObjectId(): string {
+  const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0')
+  const machineId = Math.floor(Math.random() * 16777216).toString(16).padStart(6, '0')
+  const processId = Math.floor(Math.random() * 65536).toString(16).padStart(4, '0')
+  const counter = Math.floor(Math.random() * 16777216).toString(16).padStart(6, '0')
+  
+  return timestamp + machineId + processId + counter
+}
+
+// UUID generator (wrapper around crypto.randomUUID)
+export function generateUUID(): string {
+  return crypto.randomUUID()
 }
 
 export class AutomergeService<T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<ServiceDataDocument<T>>
+  idField: string
+  idGenerator: IdGenerator
 
-  constructor(handle: DocHandle<ServiceDataDocument<T>>) {
+  constructor(handle: DocHandle<ServiceDataDocument<T>>, options: AutomergeServiceOptions = {}) {
     this.handle = handle
+    this.idField = options.idField || '_id'
+    this.idGenerator = options.idGenerator || generateUUID
   }
 
   async get(id: string) {
@@ -26,9 +52,16 @@ export class AutomergeService<T> {
   }
 
   async create(data: T) {
-    const id = crypto.randomUUID()
+    const id = data[this.idField] || this.idGenerator()
+    const doc = await this.handle.doc()
+
+    // Check if the item already exists
+    if (doc && doc[id]) {
+      return doc[id]
+    }
+    
     const item = {
-      id,
+      [this.idField]: id,
       ...data
     }
 
@@ -46,9 +79,14 @@ export class AutomergeService<T> {
       ...data
     }
 
-    this.handle.change((doc) => {
-      doc[id] = patched
-    })
+    // Check if the patched object is different from the original item
+    const isChanged = Object.keys(data).some(key => item[key] !== data[key])
+    
+    if (isChanged) {
+      this.handle.change((doc) => {
+        doc[id] = patched
+      })
+    }
 
     return patched
   }
