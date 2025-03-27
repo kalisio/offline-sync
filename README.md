@@ -2,29 +2,60 @@
 
 ## Example
 
-This repository contains an example for a Feathers API with full offline-first capabilities. To try it run
+This repository contains an example for a Feathers API with full offline-first capabilities. It comes in several components:
 
-```sh
+### Installation
+
+Install all the dependencies in the monorepo with
+
+```
 npm install
-cd frontend
+```
+
+### MongoDB
+
+Start the local MongoDB server with
+
+```
+docker compose up
+```
+
+### server
+
+This is a standard Feathers 5 API with websockets enabled and a `todos` service as well as a `sync` service which stores information about the synced documents (e.g. Automerge document IDs, service path and channel).
+
+Run it with
+
+```
+cd server
 npm run dev
 ```
 
-Then go to [localhost:5173](http://localhost:5173). This will initialize a new repository and add the link to the hash.
-Copy the URL to collaborate on this todo list. To open an existing list go to:
+### sync-server
 
-[http://localhost:5173/#automerge:3vrUzv7r6MnQeuyoA8CzXByExwHY](http://localhost:5173/#automerge:3vrUzv7r6MnQeuyoA8CzXByExwHY).
+This is the synchronization server that connects to the `server` API and handles the synchronization of the documents.
 
-### Sync server
+Run it with
 
-By default the frontend does not require any backend and uses the development sync server from [automerge.org](https://automerge.org/). To use your own sync server, in addition to the frontend, run
-
-```sh
+```
 cd sync-server
 npm start
 ```
 
-And change `SYNC_SERVER_URL` in `frontend/src/feathers/app.ts` to `ws://localhost:5050`
+On first start it will initialise an Automerge document for the `todos` service on the default channel.
+
+### frontend
+
+The frontend is a simple Todo app using VueJS and a Feathers client with websockets enabled and a `todos` service.
+
+Run it with:
+
+```sh
+cd frontend
+npm run dev
+```
+
+Then go to [localhost:5173](http://localhost:5173).
 
 ## Goal
 
@@ -41,18 +72,6 @@ graph TD
   C1[Client] -->|Creates Snapshot| SN
   SN --> |Updates| FA
 ```
-
-### Snapshot Server
-
-The key component for synchronization is a _snapshot server_. It is used to create offline views (normally based on a query) that can be freely edited while offline and are synchronized once the client is back online. The snapshots server then determines the changes that need to be made to either the Feathers API or to the database directly. The snapshot server also keeps tracks of events from the Feathers API (or the database change feed) to keep current snapshots up to date.
-
-### Client
-
-A client creates a snapshot document, usually based on a query, e.g. `service.find({ query: { userId, projectId } })`. This will then become available offline and can be viewed and modified (changing existing entries and adding new ones).
-
-### Sync Server
-
-This is a basic [Automerge Sync Server](https://automerge.org/) that synchronizes the snapshot documents between clients and the snapshot server. It can run within the Snapshot server.
 
 ## Alternatives
 

@@ -1,0 +1,18 @@
+{
+  "name": "feathers-automerge",
+  "version": "0.1.0",
+  "description": "Feathers service for Automerge",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Kalisio",
+  "license": "MIT",
+  "dependencies": {
+    "@automerge/automerge-repo": "^1.2.1",
+    "@automerge/automerge-repo-network-websocket": "^1.2.1",
+    "@automerge/automerge-repo-storage-indexeddb": "^1.2.1"
+  }
+}

@@ -10,9 +10,14 @@
     "server",
     "sync-server",
     "frontend",
-    "feathers-offline"
+    "feathers-automerge"
   ],
   "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "author": "Kalisio",
+  "license": "MIT",
+  "dependencies": {
+    "@feathersjs/feathers": "^5.0.33",
+    "@feathersjs/socketio-client": "^5.0.33",
+    "socket.io-client": "^4.8.1"
+  }
 }
