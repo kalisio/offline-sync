@@ -1,7 +1,11 @@
 import type { AnyDocumentId, DocHandle } from "@automerge/automerge-repo"
+import type { EventEmitter } from "node:events"
 import { Repo } from '@automerge/automerge-repo'
 import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket'
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
+import { Params } from "@feathersjs/feathers"
+import sift from 'sift'
+import { sorter } from '@feathersjs/adapter-commons'
 
 export type ServiceDataDocument<T> = {
   [key: string]: T & { [key: string]: string }
@@ -10,8 +14,10 @@ export type ServiceDataDocument<T> = {
 export type IdGenerator = () => string
 
 export interface AutomergeServiceOptions {
-  idField?: string
-  idGenerator?: IdGenerator
+  idField: string
+  idGenerator: IdGenerator
+  matcher: any
+  sorter: typeof sorter
 }
 
 // MongoDB ObjectId-like generator
@@ -29,16 +35,78 @@ export function generateUUID(): string {
   return crypto.randomUUID()
 }
 
-export class AutomergeService<T> {
+export type Paginated<T> = {
+  total: number
+  limit: number
+  skip: number
+  data: T[]
+}
+
+export type FindParams = Params<Record<string, any>>
+
+export class AutomergeService<T,C = T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<ServiceDataDocument<T>>
-  idField: string
-  idGenerator: IdGenerator
+  public options: AutomergeServiceOptions
 
-  constructor(handle: DocHandle<ServiceDataDocument<T>>, options: AutomergeServiceOptions = {}) {
+  constructor(handle: DocHandle<ServiceDataDocument<T>>, options: Partial<AutomergeServiceOptions> = {}) {
     this.handle = handle
-    this.idField = options.idField || '_id'
-    this.idGenerator = options.idGenerator || generateUUID
+    this.options = {
+      idField: options.idField || 'id',
+      idGenerator: options.idGenerator || generateUUID,
+      matcher: sift,
+      sorter,
+      ...options
+    }
+  }
+
+  get idField() {
+    return this.options.idField
+  }
+
+  get idGenerator() {
+    return this.options.idGenerator
+  }
+
+  async find(params: FindParams & { paginate: false }): Promise<T[]>
+  async find(params: FindParams & { paginate: true }): Promise<Paginated<T>>
+  async find(params: FindParams & { paginate?: boolean }): Promise<T[] | Paginated<T>>  {
+    const doc = await this.handle.doc()
+
+    if (!doc) {
+      throw new Error('Document not loaded')
+    }
+
+    const { $skip = 0, $limit = 10, $sort, ...query } = params.query || {}
+
+    let values = Object.values(doc) as T[]
+    const hasQuery = Object.keys(query).length > 0
+
+    if ($sort) {
+      values.sort(this.options.sorter($sort))
+    }
+
+    if (hasQuery) {
+      values = values.filter(this.options.matcher(query))
+    }
+
+    if (params.paginate === true) {
+      const total = values.length
+
+      values = values.slice($skip)
+      values = values.slice(0, $limit)
+
+      const result = {
+        total,
+        limit: $limit,
+        skip: $skip || 0,
+        data: values
+      }
+
+      return result
+    }
+
+    return values
   }
 
   async get(id: string) {
@@ -51,16 +119,15 @@ export class AutomergeService<T> {
     return doc[id]
   }
 
-  async create(data: T) {
-    const id = data[this.idField] || this.idGenerator()
-    
+  async create(data: C) {
+    const id = (data as any)[this.idField] || this.idGenerator()
     const item = {
       [this.idField]: id,
       ...data
-    }
+    } as T
 
     this.handle.change((doc) => {
-      doc[id] = item
+      (doc as any)[id] = item
     })
 
     return item
@@ -96,16 +163,6 @@ export class AutomergeService<T> {
     return removed
   }
 
-  async find() {
-    const doc = await this.handle.doc()
-
-    if (!doc) {
-      throw new Error('Document not loaded')
-    }
-
-    return Object.values(doc)
-  }
-
   async setup() {
     this.handle.on('change', ({ patches, patchInfo,  }) => {
       const { before, after } = patchInfo
@@ -115,14 +172,15 @@ export class AutomergeService<T> {
       }
 
       const ids = new Set(patches.map((patch) => patch.path[0]))
+      const emitter = this as unknown as EventEmitter
 
       for (const id of ids) {
         if (!before[id]) {
-          (this as any).emit('created', after[id])
+          emitter.emit('created', after[id])
         } else if (!after[id]) {
-          (this as any).emit('removed', before[id])
+          emitter.emit('removed', before[id])
         } else if (before[id]) {
-          (this as any).emit('patched', after[id])
+          emitter.emit('patched', after[id])
         }
       }
     })
