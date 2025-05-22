@@ -4,20 +4,17 @@
   "description": "## Goal",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "lerna run compile",
+    "test": "npm run compile && lerna run test"
   },
   "workspaces": [
-    "server",
-    "sync-server",
-    "frontend",
-    "feathers-automerge"
+    "packages/*",
+    "example/*"
   ],
   "keywords": [],
   "author": "Kalisio",
   "license": "MIT",
-  "dependencies": {
-    "@feathersjs/feathers": "^5.0.33",
-    "@feathersjs/socketio-client": "^5.0.33",
-    "socket.io-client": "^4.8.1"
+  "devDependencies": {
+    "lerna": "^8.2.2"
   }
 }

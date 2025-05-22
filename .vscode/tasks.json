@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Docker containers",
+      "type": "shell",
+      "command": "docker compose up",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Server API",
+      "type": "npm",
+      "script": "dev",
+      "path": "example/server/",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Sync Server",
+      "type": "npm",
+      "script": "dev",
+      "path": "example/sync-server/",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    },
+    {
+      "label": "Frontend Application",
+      "type": "npm",
+      "script": "dev",
+      "path": "example/frontend/",
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
+    }
+  ]
+}

@@ -12,7 +12,11 @@ Install all the dependencies in the monorepo with
 npm install
 ```
 
-### MongoDB
+### Starting the application
+
+When using Visual Studio Code, all the below commands will be started automatically.
+
+#### MongoDB
 
 Start the local MongoDB server with
 
@@ -20,7 +24,7 @@ Start the local MongoDB server with
 docker compose up
 ```
 
-### server
+#### server
 
 This is a standard Feathers 5 API with websockets enabled and a `todos` service as well as a `sync` service which stores information about the synced documents (e.g. Automerge document IDs, service path and channel).
 
@@ -31,7 +35,7 @@ cd server
 npm run dev
 ```
 
-### sync-server
+#### sync-server
 
 This is the synchronization server that connects to the `server` API and handles the synchronization of the documents.
 
@@ -44,7 +48,7 @@ npm start
 
 On first start it will initialise an Automerge document for the `todos` service on the default channel.
 
-### frontend
+#### frontend
 
 The frontend is a simple Todo app using VueJS and a Feathers client with websockets enabled and a `todos` service.
 
