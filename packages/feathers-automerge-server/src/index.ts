@@ -1,7 +1,7 @@
 import { AnyDocumentId, Repo } from "@automerge/automerge-repo"
 import { Application, feathers, NextFunction } from "@feathersjs/feathers"
 import { AutomergeService, ServiceDataDocument } from 'feathers-automerge'
-import { NodeWSServerAdapter } from '@automerge/automerge-repo-network-websocket';
+import { BrowserWebSocketClientAdapter, NodeWSServerAdapter } from '@automerge/automerge-repo-network-websocket';
 import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs';
 import { WebSocketServer } from "ws";
 import os from 'os';
@@ -21,34 +21,38 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
   
   automergeApp.use(sync.service, automergeService)
 
-  automergeApp.service(sync.service).on('created', todo => {
-    console.log('Automerge app create', todo)
+  automergeApp.service(sync.service).on('created', data => {
+    console.log('Automerge app create', data)
     serverApp.service(sync.service)
-      .create(todo)
+      .create(data)
       .catch(e => console.error(e))
   })
 
-  automergeApp.service(sync.service).on('patched', todo => {
-    console.log('Automerge app patch', todo)
+  automergeApp.service(sync.service).on('patched', data => {
+    const { _id, ...rest } = data
+    const id = _id.toString()
+    console.log('Automerge app patch', rest)
     serverApp.service(sync.service)
-      .patch(todo._id, todo)
+      .patch(id, rest)
       .catch(e => console.error(e))
   })
 
-  automergeApp.service(sync.service).on('removed', todo => {
-    console.log('Automerge app remove', todo)
+  automergeApp.service(sync.service).on('removed', data => {
+    console.log('Automerge app remove', data)
+    const id = data._id.toString()
     serverApp.service(sync.service)
-      .remove(todo._id)
+      .remove(id)
       .catch(e => console.error(e))
   })
 
   serverApp.service(sync.service).on('created', async (data) =>{
     const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
+    const id = data._id.toString()
 
     console.log('Server create', data)
 
-    if (data && doc && !doc[data._id]) {
+    if (data && doc && !doc[id]) {
       automergeApp.service(sync.service)
         .create(data)
         .catch(e => console.error(e))
@@ -58,16 +62,19 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
   serverApp.service(sync.service).on('patched', async (data) => {
     const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
+    const { _id, ...payload } = data
+    const id = _id.toString()
 
-    console.log('Server patch', data)
+    console.log('Server patch', payload)
 
-    if (doc) {
+    if (doc && doc[id]) {
+      const docData = doc[id]
       // Check if doc[data._id] is different than data
-      const isChanged = Object.keys(data).some(key => doc[data._id][key] !== data[key])
+      const isChanged = Object.keys(payload).some(key => docData[key] !== payload[key])
 
       if (isChanged) {
         automergeApp.service(sync.service)
-          .patch(data._id, data)
+          .patch(id, payload)
           .catch(e => console.error(e))
       }
     }
@@ -76,12 +83,13 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
   serverApp.service(sync.service).on('removed', async (data) => {
     const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
+    const id = data._id.toString()
 
     console.log('Server remove', data)
 
-    if (doc && doc[data._id]) {
+    if (doc && doc[id]) {
       automergeApp.service(sync.service)
-        .remove(data._id)
+        .remove(id)
         .catch(e => console.error(e))
     }
   })
@@ -99,9 +107,10 @@ export async function createAutomergeApp(app: Application, repo: Repo, syncs: Sy
   return automergeApp
 }
 
-export function createRepo(dir: string, wss: WebSocketServer, hostname: string = os.hostname()) {
+export function createRepo(dir: string, wss: WebSocketServer|string, hostname: string = os.hostname()) {
+  const networkAdapter = typeof wss === 'string' ? new BrowserWebSocketClientAdapter(wss) : new NodeWSServerAdapter(wss as any)
   const config = {
-    network: [new NodeWSServerAdapter(wss as any)],
+    network: [networkAdapter],
     storage: new NodeFSStorageAdapter(dir),
     /** @ts-ignore @type {(import("@automerge/automerge-repo").PeerId)}  */
     peerId: `storage-server-${hostname}` as PeerId,

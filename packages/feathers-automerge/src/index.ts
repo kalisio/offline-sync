@@ -120,11 +120,11 @@ export class AutomergeService<T,C = T> {
   }
 
   async create(data: C) {
-    const id = (data as any)[this.idField] || this.idGenerator()
-    const item = {
+    const id = (data as any)[this.idField]?.toString() || this.idGenerator()
+    const item = JSON.parse(JSON.stringify({
       [this.idField]: id,
       ...data
-    } as T
+    })) as T
 
     this.handle.change((doc) => {
       (doc as any)[id] = item
@@ -135,10 +135,10 @@ export class AutomergeService<T,C = T> {
 
   async patch(id: string, data: Partial<T>) {
     const item = await this.get(id)
-    const patched = {
+    const patched = JSON.parse(JSON.stringify({
       ...item,
       ...data
-    }
+    }))
 
     this.handle.change((doc) => {
       doc[id] = patched
