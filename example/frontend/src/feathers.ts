@@ -3,7 +3,6 @@ import socketio from '@feathersjs/socketio-client'
 import io from 'socket.io-client'
 import { AutomergeService, createBrowserRepo, generateObjectId, type ServiceDataDocument } from 'feathers-automerge'
 
-const SYNC_SERVER_URL = 'ws://localhost:4040' // 'wss://sync.automerge.org'
 const FEATHERS_SERVER_URL = 'http://localhost:3030'
 
 export type Todo = {
@@ -15,7 +14,7 @@ export type TodoItem = Todo & {
   _id: string
 }
 
-const repo = createBrowserRepo(SYNC_SERVER_URL)
+const repo = createBrowserRepo(FEATHERS_SERVER_URL)
 
 type TodoService = AutomergeService<Todo>
 
