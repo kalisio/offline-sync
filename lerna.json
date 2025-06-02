@@ -10,8 +10,7 @@
     },
     "publish": {
       "allowBranch": [
-        "crow",
-        "dove"
+        "main"
       ],
       "message": "chore(release): publish %s",
       "conventionalCommits": true,

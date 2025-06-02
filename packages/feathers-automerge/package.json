@@ -4,6 +4,9 @@
   "description": "Feathers service for Automerge",
   "main": "lib/index.js",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "vitest run",
     "compile": "rm -rf lib && tsc",
