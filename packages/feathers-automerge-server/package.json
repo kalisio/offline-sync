@@ -1,9 +1,12 @@
 {
   "name": "feathers-automerge-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Feathers service for Automerge server",
   "main": "lib/index.js",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "test": "vitest run",
     "compile": "rm -rf lib && tsc",
@@ -17,8 +20,8 @@
     "@automerge/automerge-repo-network-websocket": "^1.2.1",
     "@automerge/automerge-repo-storage-nodefs": "^1.2.1",
     "@feathersjs/adapter-commons": "^5.0.33",
-    "sift": "^17.1.3",
-    "feathers-automerge": "0.1.0"
+    "feathers-automerge": "^0.1.1",
+    "sift": "^17.1.3"
   },
   "devDependencies": {
     "@feathersjs/adapter-tests": "^5.0.33",
