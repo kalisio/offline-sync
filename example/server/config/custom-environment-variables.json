@@ -4,6 +4,7 @@
     "__format": "number"
   },
   "host": "HOSTNAME",
+  "mongodb": "MONGODB",
   "authentication": {
     "secret": "FEATHERS_SECRET"
   }

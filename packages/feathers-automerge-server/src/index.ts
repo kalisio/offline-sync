@@ -10,7 +10,8 @@ import type { Server as HttpServer } from 'http';
 export type SyncServiceSettings = {
   service: string,
   channel: string,
-  url: string
+  url: string,
+  idField?: string
 }
 
 export type AutomergeApplication = Application<any, { repo: Repo }>
@@ -18,6 +19,7 @@ export type AutomergeApplication = Application<any, { repo: Repo }>
 export function initSyncService(sync: SyncServiceSettings, automergeApp: AutomergeApplication, serverApp: Application) {
   const handle = automergeApp.get('repo').find<ServiceDataDocument<any>>(sync.url as AnyDocumentId)
   const automergeService = new AutomergeService<any>(handle)
+  const idField = sync.idField || '_id'
   
   automergeApp.use(sync.service, automergeService)
 
@@ -29,7 +31,7 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
   })
 
   automergeApp.service(sync.service).on('patched', data => {
-    const { _id, ...rest } = data
+    const { [idField]: _id, ...rest } = data
     const id = _id.toString()
     console.log('Automerge app patch', rest)
     serverApp.service(sync.service)
@@ -37,9 +39,18 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
       .catch(e => console.error(e))
   })
 
+  automergeApp.service(sync.service).on('updated', data => {
+    const { [idField]: _id, ...rest } = data
+    const id = _id.toString()
+    console.log('Automerge app update', rest)
+    serverApp.service(sync.service)
+      .update(id, rest)
+      .catch(e => console.error(e))
+  })
+
   automergeApp.service(sync.service).on('removed', data => {
     console.log('Automerge app remove', data)
-    const id = data._id.toString()
+    const id = data[idField].toString()
     serverApp.service(sync.service)
       .remove(id)
       .catch(e => console.error(e))
@@ -48,7 +59,7 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
   serverApp.service(sync.service).on('created', async (data) =>{
     const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
-    const id = data._id.toString()
+    const id = data[idField].toString()
 
     console.log('Server create', data)
 
@@ -62,7 +73,7 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
   serverApp.service(sync.service).on('patched', async (data) => {
     const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
-    const { _id, ...payload } = data
+    const { [idField]: _id, ...payload } = data
     const id = _id.toString()
 
     console.log('Server patch', payload)
@@ -80,10 +91,31 @@ export function initSyncService(sync: SyncServiceSettings, automergeApp: Automer
     }
   })
 
+  serverApp.service(sync.service).on('updated', async (data) => {
+    const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
+    const doc = await service.handle.doc()
+    const { [idField]: _id, ...payload } = data
+    const id = _id.toString()
+
+    console.log('Server update', payload)
+
+    if (doc && doc[id]) {
+      const docData = doc[id]
+      // Check if doc[data._id] is different than data
+      const isChanged = Object.keys(payload).some(key => docData[key] !== payload[key])
+
+      if (isChanged) {
+        automergeApp.service(sync.service)
+          .update(id, payload)
+          .catch(e => console.error(e))
+      }
+    }
+  })
+
   serverApp.service(sync.service).on('removed', async (data) => {
     const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
-    const id = data._id.toString()
+    const id = data[idField].toString()
 
     console.log('Server remove', data)
 

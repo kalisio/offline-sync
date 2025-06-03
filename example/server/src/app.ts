@@ -40,9 +40,9 @@ app.configure(
     }
   })
 )
-app.configure(automerge)
 app.configure(mongodb)
 app.configure(services)
+app.configure(automerge)
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler

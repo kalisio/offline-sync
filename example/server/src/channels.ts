@@ -27,6 +27,11 @@ export const channels = (app: Application) => {
     }
   })
 
+  app.on('publish', (ev: string, channel: any) => {
+    console.log(ev, channel)
+    // return app.channel('anonymous')
+  })
+
   // eslint-disable-next-line no-unused-vars
   app.publish((data: any, context: HookContext) => {
     // Here you can add event publishers to channels set up in `channels.js`
