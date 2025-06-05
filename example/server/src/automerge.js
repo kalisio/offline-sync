@@ -1,10 +1,9 @@
-import { automergeSyncServer, createAutomergeApp, createRepo, createWss, SyncServiceSettings } from 'feathers-automerge-server'
-import { Application, HookContext, NextFunction } from '../../server/src/declarations';
-import { Repo } from '@automerge/automerge-repo';
+import { automergeSyncServer, createAutomergeApp, createRepo, createWss } from 'feathers-automerge-server'
 
-export async function automerge(app: Application) {
-  let repo: Repo
+export async function automerge(app) {
+  let repo
 
+  // Use dynamic import for ESM compatibility
   if (process.env.SYNC_SERVER_URL) {
     // If we are connecting to another sync server, only create the repository
     repo = createRepo('../data', process.env.SYNC_SERVER_URL!)
@@ -17,7 +16,7 @@ export async function automerge(app: Application) {
 
   app.service('sync').hooks({
     before: {
-      create: async (context: HookContext) => {
+      create: async (context) => {
         const { data } = context
         
         if(!data.url) {
@@ -32,9 +31,9 @@ export async function automerge(app: Application) {
   })
 
   app.hooks({
-    setup: [async (context: HookContext, next: NextFunction) => {
+    setup: [async (context, next) => {
       const page = await app.service('sync').find()
-      const syncs: SyncServiceSettings[] = page.data
+      const syncs = page.data
       
       createAutomergeApp(app, repo, syncs)
 

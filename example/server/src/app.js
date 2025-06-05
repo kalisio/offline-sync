@@ -12,16 +12,14 @@ import express, {
 import configuration from '@feathersjs/configuration'
 import socketio from '@feathersjs/socketio'
 
-import type { Application } from './declarations'
+import { logger } from './logger.js'
+import { logError } from './hooks/log-error.js'
+import { mongodb } from './mongodb.js'
+import { services } from './services/index.js'
+import { channels } from './channels.js'
+import { automerge } from './automerge.js'
 
-import { logger } from './logger'
-import { logError } from './hooks/log-error'
-import { mongodb } from './mongodb'
-import { services } from './services/index'
-import { channels } from './channels'
-import { automerge } from './automerge'
-
-const app: Application = express(feathers())
+const app = express(feathers())
 
 // Load app configuration
 app.configure(configuration())
@@ -41,6 +39,7 @@ app.configure(
   })
 )
 app.configure(mongodb)
+
 app.configure(services)
 app.configure(automerge)
 app.configure(channels)

@@ -1,15 +1,12 @@
-// For more information about this file see https://dove.feathersjs.com/guides/cli/service.html
-
-import type { Application } from '../../declarations'
-import { SyncService, getOptions } from './sync.class'
+import { SyncService, getOptions } from './sync.class.js'
 
 export const syncPath = 'sync'
-export const syncMethods: Array<keyof SyncService> = ['find', 'get', 'create', 'patch', 'remove']
+export const syncMethods = ['find', 'get', 'create', 'patch', 'remove']
 
-export * from './sync.class'
+export * from './sync.class.js'
 
 // A configure function that registers the service and its hooks via `app.configure`
-export const sync = (app: Application) => {
+export const sync = app => {
   // Register our service on the Feathers application
   app.use(syncPath, new SyncService(getOptions(app)), {
     // A list of all methods this service exposes externally
@@ -37,11 +34,4 @@ export const sync = (app: Application) => {
       all: []
     }
   })
-}
-
-// Add this service to the service type index
-declare module '../../declarations' {
-  interface ServiceTypes {
-    [syncPath]: SyncService
-  }
 }
