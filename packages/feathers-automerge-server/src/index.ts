@@ -1,4 +1,4 @@
-import { AnyDocumentId, DocHandle, Repo } from "@automerge/automerge-repo";
+import { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import { Application, feathers, NextFunction } from "@feathersjs/feathers";
 import { AutomergeService, ServiceDataDocument } from "feathers-automerge";
 import {

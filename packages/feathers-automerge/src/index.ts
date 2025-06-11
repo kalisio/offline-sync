@@ -222,6 +222,18 @@ export function getDocumentHandle<T>(repo: Repo, docId?: AnyDocumentId) {
   return repo.create<ServiceDataDocument<T>>();
 }
 
-export function automergeClient() {
-  return function () {};
-}
+// export function automergeClient() {
+//   const { data: syncs } = await app.service("automerge").find();
+
+//   for (const sync of syncs) {
+//     console.log("Registering automerge service", sync);
+//     const handle = repo.find<ServiceDataDocument<Todo>>(sync.url as any);
+//     const automergeService = new AutomergeService<Todo>(handle, {
+//       idField: "_id",
+//       idGenerator: generateObjectId,
+//     });
+//     app.use(sync.service as any, automergeService);
+//   }
+
+//   return function () {};
+// }
