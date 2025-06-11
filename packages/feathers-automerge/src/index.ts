@@ -3,7 +3,7 @@ import type { EventEmitter } from "node:events";
 import { Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
-import { Params } from "@feathersjs/feathers";
+import { Application, NextFunction, Params } from "@feathersjs/feathers";
 import sift from "sift";
 import { sorter } from "@feathersjs/adapter-commons";
 
@@ -222,18 +222,32 @@ export function getDocumentHandle<T>(repo: Repo, docId?: AnyDocumentId) {
   return repo.create<ServiceDataDocument<T>>();
 }
 
-// export function automergeClient() {
-//   const { data: syncs } = await app.service("automerge").find();
+export function automergeClient(syncServerUrl: string) {
+  return function (app: Application) {
+    const repo = createBrowserRepo(syncServerUrl);
 
-//   for (const sync of syncs) {
-//     console.log("Registering automerge service", sync);
-//     const handle = repo.find<ServiceDataDocument<Todo>>(sync.url as any);
-//     const automergeService = new AutomergeService<Todo>(handle, {
-//       idField: "_id",
-//       idGenerator: generateObjectId,
-//     });
-//     app.use(sync.service as any, automergeService);
-//   }
+    app.set("repo", repo);
 
-//   return function () {};
-// }
+    app.hooks({
+      setup: [
+        async (_context: unknown, next: NextFunction) => {
+          const { data: syncs } = await app.service("automerge").find();
+
+          for (const sync of syncs) {
+            console.log("Registering automerge service", sync);
+            const handle = repo.find<ServiceDataDocument<unknown>>(
+              sync.url as any,
+            );
+            const automergeService = new AutomergeService<unknown>(handle, {
+              idField: sync.idField,
+              idGenerator: generateObjectId,
+            });
+            app.use(sync.service as any, automergeService);
+          }
+
+          await next();
+        },
+      ],
+    });
+  };
+}
