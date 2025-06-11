@@ -1,4 +1,5 @@
 import { TodosService, getOptions } from './todos.class.js'
+import { toObjectId } from '../../hooks/to-objectid.js'
 
 export const todosPath = 'todos'
 export const todosMethods = ['find', 'get', 'create', 'patch', 'remove']
@@ -23,7 +24,7 @@ export const todos = app => {
       all: [],
       find: [],
       get: [],
-      create: [],
+      create: [toObjectId],
       patch: [],
       remove: []
     },

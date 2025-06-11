@@ -20,6 +20,8 @@ This project uses [Feathers](http://feathersjs.com). An open source framework fo
 
     ```
     npm start
+    # Or
+    npm run dev
     ```
 
 ## Testing

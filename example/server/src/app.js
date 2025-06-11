@@ -11,13 +11,13 @@ import express, {
 } from '@feathersjs/express'
 import configuration from '@feathersjs/configuration'
 import socketio from '@feathersjs/socketio'
+import { automergeServer } from 'feathers-automerge-server'
 
 import { logger } from './logger.js'
 import { logError } from './hooks/log-error.js'
 import { mongodb } from './mongodb.js'
 import { services } from './services/index.js'
 import { channels } from './channels.js'
-import { automerge } from './automerge.js'
 
 const app = express(feathers())
 
@@ -41,7 +41,7 @@ app.configure(
 app.configure(mongodb)
 
 app.configure(services)
-app.configure(automerge)
+app.configure(automergeServer())
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler

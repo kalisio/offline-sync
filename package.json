@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "compile": "lerna run compile",
-    "test": "npm run compile && lerna run test"
+    "test": "npm run compile && lerna run test",
+    "dev": "./dev.sh"
   },
   "workspaces": [
     "packages/*",

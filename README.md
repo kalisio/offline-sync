@@ -16,6 +16,14 @@ npm install
 
 When using Visual Studio Code, all the below commands will be started automatically.
 
+### Development script
+
+All commands can also be run at once with
+
+```
+npm run dev
+```
+
 #### MongoDB
 
 Start the local MongoDB server with
@@ -35,18 +43,11 @@ cd server
 npm run dev
 ```
 
-#### sync-server
+You can also run a second server insteance to test server to server synchronization by running the command with the following environment variables:
 
-This is the synchronization server that connects to the `server` API and handles the synchronization of the documents.
-
-Run it with
-
+```sh
+PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../data2" AUTOMERGE_DOCUMENT="<main document>" SYNC_SERVER_URL="http://localhost:3030"  npm run dev
 ```
-cd sync-server
-npm start
-```
-
-On first start it will initialise an Automerge document for the `todos` service on the default channel.
 
 #### frontend
 
