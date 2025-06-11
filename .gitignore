@@ -135,4 +135,5 @@ dist
 .yarn/install-state.gz
 .pnp.*
 data/
+data2/
 lib/

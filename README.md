@@ -46,7 +46,7 @@ npm run dev
 You can also run a second server insteance to test server to server synchronization by running the command with the following environment variables:
 
 ```sh
-PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../data2" AUTOMERGE_DOCUMENT="<main document>" SYNC_SERVER_URL="http://localhost:3030"  npm run dev
+PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../data2" AUTOMERGE_DOCUMENT="<main document>" SYNC_SERVER_URL="http://localhost:3030" npm run dev
 ```
 
 #### frontend

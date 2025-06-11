@@ -179,21 +179,22 @@ export function createRepo(
   wss: WebSocketServer | string,
   hostname: string = os.hostname(),
 ) {
-  const networkAdapter =
-    typeof wss === "string"
-      ? new BrowserWebSocketClientAdapter(wss)
-      : new NodeWSServerAdapter(wss as any);
-  const config = {
-    network: [networkAdapter],
+  if (typeof wss === "string") {
+    return new Repo({
+      network: [new BrowserWebSocketClientAdapter(wss)],
+      storage: new NodeFSStorageAdapter(dir),
+    });
+  }
+
+  return new Repo({
+    network: [new NodeWSServerAdapter(wss as any)],
     storage: new NodeFSStorageAdapter(dir),
     /** @ts-ignore @type {(import("@automerge/automerge-repo").PeerId)}  */
     peerId: `storage-server-${hostname}` as PeerId,
     // Since this is a server, we don't share generously — meaning we only sync documents they already
     // know about and can ask for by ID.
     sharePolicy: async () => false,
-  };
-
-  return new Repo(config);
+  });
 }
 
 export function createWss() {
@@ -267,7 +268,9 @@ export function automergeServer() {
 
     if (!options.document) {
       const syncs = options.services.map((service) => {
-        const doc = repo.create();
+        const doc = repo.create({
+          service,
+        });
         const url = doc.url;
 
         return {
