@@ -10,5 +10,5 @@
   "endOfLine": "auto",
   "jsxSingleQuote": false,
   "quoteProps": "as-needed",
-  "parser": "typescript"
+  "parser": "babel"
 }

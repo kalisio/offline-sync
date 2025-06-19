@@ -8,6 +8,17 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  mongodb2:
+    image: mongo:latest
+    container_name: mongodb2
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data2:/data/db
+
 volumes:
   mongo-data:
+    driver: local
+  mongo-data2:
     driver: local

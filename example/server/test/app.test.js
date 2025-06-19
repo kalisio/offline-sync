@@ -1,14 +1,13 @@
 // For more information about this file see https://dove.feathersjs.com/guides/cli/app.test.html
 import assert from 'assert'
 import axios from 'axios'
-import type { Server } from 'http'
-import { app } from '../src/app'
+import { app } from '../src/app.js'
 
 const port = app.get('port')
 const appUrl = `http://${app.get('host')}:${port}`
 
 describe('Feathers application tests', () => {
-  let server: Server
+  let server
 
   before(async () => {
     server = await app.listen(port)
@@ -19,7 +18,7 @@ describe('Feathers application tests', () => {
   })
 
   it('starts and shows the index page', async () => {
-    const { data } = await axios.get<string>(appUrl)
+    const { data } = await axios.get(appUrl)
 
     assert.ok(data.indexOf('<html lang="en">') !== -1)
   })
@@ -30,7 +29,7 @@ describe('Feathers application tests', () => {
         responseType: 'json'
       })
       assert.fail('should never get here')
-    } catch (error: any) {
+    } catch (error) {
       const { response } = error
       assert.strictEqual(response?.status, 404)
       assert.strictEqual(response?.data?.code, 404)
