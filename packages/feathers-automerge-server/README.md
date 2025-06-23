@@ -1,4 +1,4 @@
-# feathers-automerge-server
+# @kalisio/feathers-automerge-server
 
 Utilities to set up an automerge sync server that synchronizes documents with a Feathers API.
 
@@ -7,7 +7,7 @@ Utilities to set up an automerge sync server that synchronizes documents with a 
 In your Feathers application, add the following to your `app` file:
 
 ```ts
-import { automergeServer } from 'feathers-automerge-server'
+import { automergeServer } from '@kalisio/feathers-automerge-server'
 
 //...
 app.configure(services)

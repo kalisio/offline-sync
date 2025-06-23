@@ -1,5 +1,5 @@
 {
-  "name": "feathers-automerge-server",
+  "name": "@kalisio/feathers-automerge-server",
   "version": "0.1.1",
   "description": "Feathers service for Automerge server",
   "main": "lib/index.js",
@@ -10,7 +10,7 @@
   "scripts": {
     "test": "vitest run",
     "compile": "rm -rf lib && tsc",
-    "prepublish": "npm run compile"
+    "prepublish": "yarn run compile"
   },
   "keywords": [],
   "author": "Kalisio",
@@ -20,7 +20,7 @@
     "@automerge/automerge-repo-network-websocket": "^1.2.1",
     "@automerge/automerge-repo-storage-nodefs": "^1.2.1",
     "@feathersjs/adapter-commons": "^5.0.33",
-    "feathers-automerge": "^0.1.1",
+    "@kalisio/feathers-automerge": "^0.1.1",
     "sift": "^17.1.3"
   },
   "devDependencies": {

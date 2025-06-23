@@ -9,7 +9,7 @@ This repository contains an example for a Feathers API with full offline-first c
 Install all the dependencies in the monorepo with
 
 ```
-npm install
+yarn install
 ```
 
 ### Starting the application
@@ -21,7 +21,7 @@ When using Visual Studio Code, all the below commands will be started automatica
 All commands can also be run at once with
 
 ```
-npm run dev
+yarn run dev
 ```
 
 #### MongoDB
@@ -40,13 +40,13 @@ Run it with
 
 ```
 cd server
-npm run dev
+yarn run dev
 ```
 
 You can also run a second server insteance to test server to server synchronization by running the command with the following environment variables:
 
 ```sh
-PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../data2" AUTOMERGE_DOCUMENT="<main document>" SYNC_SERVER_URL="http://localhost:3030" npm run dev
+PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../data2" SYNC_SERVER_URL="http://localhost:3030" yarn run dev
 ```
 
 #### frontend
@@ -57,7 +57,7 @@ Run it with:
 
 ```sh
 cd frontend
-npm run dev
+yarn run dev
 ```
 
 Then go to [localhost:5173](http://localhost:5173).

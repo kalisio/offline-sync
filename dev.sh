@@ -35,10 +35,10 @@ echo ""
 (docker compose up | sed "s/^/$(printf "${BLUE}[Docker]${NC} ")/") &
 
 # Start API Wrangler dev server
-(cd example/server && npm run dev | sed "s/^/$(printf "${GREEN}[Server]${NC} ")/") &
+(cd example/server && yarn dev | sed "s/^/$(printf "${GREEN}[Server]${NC} ")/") &
 
 # Start Dashboard dev server
-(cd example/frontend && npm run dev | sed "s/^/$(printf "${YELLOW}[Frontend]${NC} ")/") &
+(cd example/frontend && yarn dev | sed "s/^/$(printf "${YELLOW}[Frontend]${NC} ")/") &
 
 # Wait for all background processes
 wait

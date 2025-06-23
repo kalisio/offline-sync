@@ -5,4 +5,4 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## 0.1.1 (2025-06-02)
 
-**Note:** Version bump only for package feathers-automerge
+**Note:** Version bump only for package @kalisio/feathers-automerge

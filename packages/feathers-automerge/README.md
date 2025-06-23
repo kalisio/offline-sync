@@ -1,16 +1,16 @@
-# feathers-automerge
+# @kalisio/feathers-automerge
 
 A Feathers service implementation for the Automerge CRDT
 
 ## Initialization
 
-With a feathers-automerge-server set up, the Automerge client can be used like this:
+With a @kalisio/feathers-automerge-server set up, the Automerge client can be used like this:
 
 ```ts
 import { feathers } from "@feathersjs/feathers";
 import socketio from "@feathersjs/socketio-client";
 import io from "socket.io-client";
-import { automergeClient, AutomergeService } from "feathers-automerge";
+import { automergeClient, AutomergeService } from "@kalisio/feathers-automerge";
 
 const FEATHERS_SERVER_URL = "http://localhost:3030";
 // In a default setup the sync server is the same as the Feathers server
@@ -37,7 +37,7 @@ export async function getApp() {
 This package also comes with a service implementation backed by an Automerge document.
 
 ```ts
-import { AutomergeService, generateObjectId } from "feathers-automerge";
+import { AutomergeService, generateObjectId } from "@kalisio/feathers-automerge";
 
 // Set when configuring the automergeClient
 const repo = app.get('repo')
