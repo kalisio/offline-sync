@@ -43,7 +43,7 @@ cd server
 yarn run dev
 ```
 
-You can also run a second server insteance to test server to server synchronization by running the command with the following environment variables:
+You can also run a second server instance to test server to server synchronization by running the command with the following environment variables:
 
 ```sh
 PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../data2" SYNC_SERVER_URL="http://localhost:3030" yarn run dev

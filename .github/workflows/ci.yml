@@ -15,6 +15,6 @@ jobs:
       - name: Install PNPM
         run: npm install -g yarn
       - name: Install Dependencies
-        run: yanr install
+        run: yarn install
       - name: Run tests
         run: yarn test
