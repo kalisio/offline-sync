@@ -6,7 +6,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
+      - ./data/mongodb:/data/db
 
   mongodb2:
     image: mongo:latest
@@ -15,10 +15,4 @@ services:
     ports:
       - "27018:27017"
     volumes:
-      - mongo-data2:/data/db
-
-volumes:
-  mongo-data:
-    driver: local
-  mongo-data2:
-    driver: local
+      - ./data/mongodb2:/data/db

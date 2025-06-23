@@ -9,7 +9,7 @@
   },
   "automerge": {
     "document": "automerge:4RgLHwNgV3rLCxf5bWv2j8eeNnmF",
-    "directory": "../data",
+    "directory": "../../data/automerge",
     "services": ["todos"]
   },
   "mongodb": "mongodb://127.0.0.1:27017/server"
