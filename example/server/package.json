@@ -36,7 +36,9 @@
     "prettier": "npx prettier \"**/*.js\" --write",
     "mocha": "cross-env NODE_ENV=test mocha test/ --recursive --exit",
     "test": "npm run mocha",
-    "bundle:client": "npm pack --pack-destination ./public"
+    "bundle:client": "npm pack --pack-destination ./public",
+    "lint": "eslint src test --ext .js",
+    "lint:fix": "eslint src test --ext .js --fix"
   },
   "dependencies": {
     "@feathersjs/adapter-commons": "^5.0.34",

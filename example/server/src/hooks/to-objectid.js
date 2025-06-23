@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb'
 
-export async function toObjectId(context) {
+export async function toObjectId (context) {
   const { data } = context
   if (data._id) {
     context.data = {

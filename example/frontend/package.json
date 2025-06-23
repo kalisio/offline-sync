@@ -8,7 +8,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src --ext .js,.ts,.vue",
+    "lint:fix": "eslint src --ext .js,.ts,.vue --fix"
   },
   "dependencies": {
     "@feathersjs/feathers": "^5.0.32",

@@ -4,10 +4,14 @@
   "description": "## Goal",
   "private": true,
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "compile": "lerna run compile",
+    "install": "yarn run compile",
     "test": "yarn compile && lerna run test",
-    "dev": "./dev.sh"
+    "dev": "./dev.sh",
+    "lint": "lerna run lint",
+    "lint:fix": "lerna run lint:fix"
   },
   "workspaces": [
     "packages/*",
