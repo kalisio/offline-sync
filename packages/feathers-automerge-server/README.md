@@ -1,52 +1,34 @@
-# feathers-automerge-server
+# @kalisio/feathers-automerge-server
 
 Utilities to set up an automerge sync server that synchronizes documents with a Feathers API.
 
 ## Usage
 
-In your Feathers application, create the following `src/automerge.ts`:
+In your Feathers application, add the following to your `app` file:
 
 ```ts
-import {
-  automergeSyncServer,
-  createAutomergeApp,
-  createRepo,
-  createWss,
-  SyncServiceSettings
-} from 'feathers-automerge-server';
-import { Application, HookContext, NextFunction } from './declarations';
+import { automergeServer } from '@kalisio/feathers-automerge-server'
 
-export async function automerge(app: Application) {
-  const wss = createWss();
-  const repo = createRepo('../data', wss);
+//...
+app.configure(services)
+// This must be after your services are configured
+app.configure(automergeServer())
+```
 
-  app.configure(automergeSyncServer(wss));
-  app.hooks({
-    setup: [
-      async (context: HookContext, next: NextFunction) => {
-        const page = await context.app.service('sync').find();
-        const syncs: SyncServiceSettings[] =
-          page.total > 0
-            ? page.data
-            : [
-                {
-                  service: 'todos',
-                  channel: 'default',
-                  url: repo.create({}).url
-                }
-              ];
-        const _automergeApp = createAutomergeApp(app, repo, syncs);
-      }
-    ]
-  });
+Then add the configuration in `config/default.json`:
+
+```json
+{
+  "automerge": {
+    "directory": "../data",
+    "services": ["todos"]
+  }
 }
 ```
 
-Then add it in `src/app.ts`:
+The following options are available:
 
-```ts
-import { automerge } from './automerge';
-
-//...
-app.configure(automerge);
-```
+- `directory`: The directory where the automerge repository will be stored.
+- `services`: An array of service names to synchronize.
+- `document`: The automerge service root document. If not set a new one will be created every time the server starts and print it to the console. Use the printed value as the future `document` option.
+- `syncServerUrl`: Set this, if this server should not act as a sync server but instead synchronize with an existing other server.

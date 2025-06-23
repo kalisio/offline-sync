@@ -1,9 +1,8 @@
 import { keywordObjectId } from '@feathersjs/mongodb'
 // For more information about this file see https://dove.feathersjs.com/guides/cli/validators.html
 import { Ajv, addFormats } from '@feathersjs/schema'
-import type { FormatsPluginOptions } from '@feathersjs/schema'
 
-const formats: FormatsPluginOptions = [
+const formats = [
   'date-time',
   'time',
   'date',
@@ -20,9 +19,9 @@ const formats: FormatsPluginOptions = [
   'regex'
 ]
 
-export const dataValidator: Ajv = addFormats(new Ajv({}), formats)
+export const dataValidator = addFormats(new Ajv({}), formats)
 
-export const queryValidator: Ajv = addFormats(
+export const queryValidator = addFormats(
   new Ajv({
     coerceTypes: true
   }),

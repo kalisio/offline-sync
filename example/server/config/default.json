@@ -2,13 +2,15 @@
   "host": "localhost",
   "port": 3030,
   "public": "./public/",
-  "origins": [
-    "http://localhost:3030",
-    "http://localhost:5137"
-  ],
+  "origins": ["http://localhost:3030"],
   "paginate": {
     "default": 10,
-    "max": 100
+    "max": 50
+  },
+  "automerge": {
+    "document": "automerge:4RgLHwNgV3rLCxf5bWv2j8eeNnmF",
+    "directory": "../../data/automerge",
+    "services": ["todos"]
   },
   "mongodb": "mongodb://127.0.0.1:27017/server"
 }

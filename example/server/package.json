@@ -7,15 +7,14 @@
   "keywords": [
     "feathers"
   ],
-  "author": "Kalisio",
-  "license": "MIT",
+  "author": {},
   "contributors": [],
   "bugs": {},
   "engines": {
     "node": ">= 20.10.0"
   },
   "feathers": {
-    "language": "ts",
+    "language": "js",
     "packager": "npm",
     "database": "mongodb",
     "framework": "express",
@@ -30,47 +29,38 @@
     "test": "test"
   },
   "main": "lib/index",
+  "type": "module",
   "scripts": {
-    "dev": "nodemon -x ts-node src/index.ts",
-    "compile": "shx rm -rf lib/ && tsc",
-    "start": "node lib/",
-    "prettier": "npx prettier \"**/*.ts\" --write",
-    "mocha": "cross-env NODE_ENV=test mocha test/ --require ts-node/register --recursive --extension .ts --exit",
+    "start": "node src",
+    "dev": "nodemon src/",
+    "prettier": "npx prettier \"**/*.js\" --write",
+    "mocha": "cross-env NODE_ENV=test mocha test/ --recursive --exit",
     "test": "npm run mocha",
-    "bundle:client": "npm run compile && npm pack --pack-destination ./public"
+    "bundle:client": "npm pack --pack-destination ./public"
   },
   "dependencies": {
-    "@feathersjs/adapter-commons": "^5.0.33",
-    "@feathersjs/authentication": "^5.0.33",
-    "@feathersjs/authentication-client": "^5.0.33",
-    "@feathersjs/configuration": "^5.0.33",
-    "@feathersjs/errors": "^5.0.33",
-    "@feathersjs/express": "^5.0.33",
-    "@feathersjs/feathers": "^5.0.33",
-    "@feathersjs/knex": "^5.0.32",
-    "@feathersjs/koa": "^5.0.32",
-    "@feathersjs/mongodb": "^5.0.33",
-    "@feathersjs/schema": "^5.0.33",
-    "@feathersjs/socketio": "^5.0.33",
-    "@feathersjs/transport-commons": "^5.0.33",
+    "@feathersjs/adapter-commons": "^5.0.34",
+    "@feathersjs/authentication": "^5.0.34",
+    "@feathersjs/authentication-client": "^5.0.34",
+    "@feathersjs/configuration": "^5.0.34",
+    "@feathersjs/errors": "^5.0.34",
+    "@feathersjs/express": "^5.0.34",
+    "@feathersjs/feathers": "^5.0.34",
+    "@feathersjs/mongodb": "^5.0.34",
+    "@feathersjs/schema": "^5.0.34",
+    "@feathersjs/socketio": "^5.0.34",
+    "@feathersjs/transport-commons": "^5.0.34",
     "compression": "^1.8.0",
-    "knex": "^3.1.0",
-    "mongodb": "^6.15.0",
-    "sqlite3": "^5.1.7",
+    "mongodb": "^6.16.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {
-    "@feathersjs/cli": "^5.0.33",
-    "@feathersjs/rest-client": "^5.0.33",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "^22.13.10",
-    "axios": "^1.8.4",
+    "@feathersjs/cli": "^5.0.34",
+    "@feathersjs/rest-client": "^5.0.34",
+    "axios": "^1.9.0",
     "cross-env": "^7.0.3",
-    "mocha": "^11.1.0",
-    "nodemon": "^3.1.9",
-    "prettier": "^3.5.3",
-    "shx": "^0.3.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "mocha": "^11.5.0",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.5.3"
   }
 }

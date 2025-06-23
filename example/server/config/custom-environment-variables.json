@@ -6,5 +6,11 @@
   "host": "HOSTNAME",
   "authentication": {
     "secret": "FEATHERS_SECRET"
-  }
+  },
+  "automerge": {
+    "syncServerUrl": "SYNC_SERVER_URL",
+    "document": "AUTOMERGE_DOCUMENT",
+    "directory": "AUTOMERGE_DIRECTORY"
+  },
+  "mongodb": "MONGODB"
 }

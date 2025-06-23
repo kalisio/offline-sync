@@ -21,16 +21,6 @@
       }
     },
     {
-      "label": "Sync Server",
-      "type": "npm",
-      "script": "dev",
-      "path": "example/sync-server/",
-      "problemMatcher": [],
-      "runOptions": {
-        "runOn": "folderOpen"
-      }
-    },
-    {
       "label": "Frontend Application",
       "type": "npm",
       "script": "dev",

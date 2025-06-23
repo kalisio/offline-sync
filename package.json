@@ -2,10 +2,12 @@
   "name": "offline-sync",
   "version": "1.0.0",
   "description": "## Goal",
+  "private": true,
   "main": "index.js",
   "scripts": {
     "compile": "lerna run compile",
-    "test": "npm run compile && lerna run test"
+    "test": "yarn compile && lerna run test",
+    "dev": "./dev.sh"
   },
   "workspaces": [
     "packages/*",

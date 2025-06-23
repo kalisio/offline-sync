@@ -1,61 +1,58 @@
-import { describe, beforeAll, test } from 'vitest'
-import { feathers } from '@feathersjs/feathers'
-import assert from 'assert'
+import { describe, beforeAll, test } from "vitest";
+import { feathers } from "@feathersjs/feathers";
+import assert from "assert";
 
-import { AutomergeService, ServiceDataDocument } from '../src/index.js'
-import { Repo } from '@automerge/automerge-repo'
+import { AutomergeService, ServiceDataDocument } from "../src/index.js";
+import { Repo } from "@automerge/automerge-repo";
 
-describe('feathers-automerge', () => {
+describe("@kalisio/feathers-automerge", () => {
   type Person = {
-    id: number
-    name: string
-    age: number
-  }
+    id: number;
+    name: string;
+    age: number;
+  };
 
-  type PersonCreate = Omit<Person, 'id'>
+  type PersonCreate = Omit<Person, "id">;
 
   const app = feathers<{
-    people: AutomergeService<Person, PersonCreate>
-  }>()
-  const repo = new Repo()
-  const handle = repo.create<ServiceDataDocument<Person>>({})
+    people: AutomergeService<Person, PersonCreate>;
+  }>();
+  const repo = new Repo();
+  const handle = repo.create<ServiceDataDocument<Person>>({});
 
-  app.use(
-    'people',
-    new AutomergeService<Person>(handle)
-  )
+  app.use("people", new AutomergeService<Person>(handle));
 
   beforeAll(async () => {
-    await app.setup()
-  })
+    await app.setup();
+  });
 
-  test('basic functionality', async () => {
-    const person = await app.service('people').create({
-      name: 'John Doe',
-      age: 30
-    })
-    
-    assert.ok(person.id)
+  test("basic functionality", async () => {
+    const person = await app.service("people").create({
+      name: "John Doe",
+      age: 30,
+    });
 
-    await app.service('people').create({
-      name: 'Jane Doe',
-      age: 25
-    })
+    assert.ok(person.id);
 
-    const people = await app.service('people').find({
-      paginate: true
-    })
+    await app.service("people").create({
+      name: "Jane Doe",
+      age: 25,
+    });
 
-    assert.equal(people.total, 2)
-    assert.equal(people.data.length, 2)
+    const people = await app.service("people").find({
+      paginate: true,
+    });
 
-    const matchedPeople = await app.service('people').find({
+    assert.equal(people.total, 2);
+    assert.equal(people.data.length, 2);
+
+    const matchedPeople = await app.service("people").find({
       paginate: true,
       query: {
-        name: 'Jane Doe'
-      }
-    })
+        name: "Jane Doe",
+      },
+    });
 
-    assert.equal(matchedPeople.total, 1)
+    assert.equal(matchedPeople.total, 1);
   });
-})
+});

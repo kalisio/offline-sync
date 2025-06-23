@@ -23,8 +23,10 @@ onMounted(async () => {
     todos.value = todos.value.filter(todo => todo._id !== removed._id)
   })
 
-  const result = await app.service('todos').find()
-  todos.value = result
+  const result = await app.service('todos').find({
+    paginate: true
+  })
+  todos.value = result.data
 })
 
 const addTodo = async () => {

@@ -19,8 +19,9 @@ This project uses [Feathers](http://feathersjs.com). An open source framework fo
 3. Start your app
 
     ```
-    npm run compile # Compile TypeScript source
     npm start
+    # Or
+    npm run dev
     ```
 
 ## Testing
