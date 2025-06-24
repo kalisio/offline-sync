@@ -32,7 +32,8 @@ echo "Press Ctrl+C to stop all services"
 echo ""
 
 # Start Docker containers
-(docker compose up | sed "s/^/$(printf "${BLUE}[Docker]${NC} ")/") &
+# (docker compose up >| sed "s/^/$(printf "${BLUE}[Docker]${NC} ")/") &
+(docker compose up > /dev/null 2>&1) &
 
 # Start API Wrangler dev server
 (cd example/server && yarn dev | sed "s/^/$(printf "${GREEN}[Server]${NC} ")/") &

@@ -8,7 +8,10 @@ import type { EventEmitter } from 'node:events'
 import sift from 'sift'
 
 export interface ServiceDataDocument<T> {
-  [key: string]: T & { [key: string]: string }
+  service: string
+  data: {
+    [key: string]: T
+  }
 }
 
 export type IdGenerator = () => string
@@ -81,13 +84,13 @@ export class AutomergeService<T, C = T> {
   async find(params: FindParams & { paginate?: boolean }): Promise<T[] | Paginated<T>> {
     const doc = await this.handle.doc()
 
-    if (doc == null) {
+    if (!doc) {
       throw new Error('Document not loaded')
     }
 
     const { $skip = 0, $limit = 10, $sort, ...query } = params.query ?? {}
 
-    let values = Object.values(doc)
+    let values = Object.values(doc.data || {})
     const hasQuery = Object.keys(query).length > 0
 
     if ($sort) {
@@ -120,11 +123,11 @@ export class AutomergeService<T, C = T> {
   async get(id: string) {
     const doc = await this.handle.doc()
 
-    if (doc == null || !doc[id]) {
+    if (doc == null || !doc.data[id]) {
       throw new Error(`Item ${id} not found`)
     }
 
-    return doc[id]
+    return doc.data[id]
   }
 
   async create(data: C) {
@@ -137,7 +140,7 @@ export class AutomergeService<T, C = T> {
     ) as T
 
     this.handle.change((doc) => {
-      ;(doc as any)[id] = item
+      doc.data[id] = item
     })
 
     return item
@@ -153,7 +156,7 @@ export class AutomergeService<T, C = T> {
     )
 
     this.handle.change((doc) => {
-      doc[id] = patched
+      doc.data[id] = patched
     })
 
     return patched
@@ -162,14 +165,14 @@ export class AutomergeService<T, C = T> {
   async remove(id: string) {
     const doc = await this.handle.doc()
 
-    if (doc == null || !doc[id]) {
+    if (doc == null || !doc.data[id]) {
       throw new Error(`Item ${id} not found`)
     }
 
-    const removed = doc[id]
+    const removed = doc.data[id]
 
     this.handle.change((doc) => {
-      delete doc[id]
+      delete doc.data[id]
     })
 
     return removed
@@ -184,15 +187,17 @@ export class AutomergeService<T, C = T> {
         return
       }
 
-      const ids = new Set(patches.map((patch) => patch.path[0]))
+      const ids = new Set(
+        patches.map((patch) => (patch.path[0] === 'data' ? patch.path[1] : null)).filter((id) => id != null)
+      )
 
       for (const id of ids) {
-        if (!before[id]) {
-          emitter.emit('created', after[id])
-        } else if (!after[id]) {
-          emitter.emit('removed', before[id])
-        } else if (before[id]) {
-          emitter.emit('patched', after[id])
+        if (!before.data[id]) {
+          emitter.emit('created', after.data[id])
+        } else if (!after.data[id]) {
+          emitter.emit('removed', before.data[id])
+        } else if (before.data[id]) {
+          emitter.emit('patched', after.data[id])
         }
       }
     })
