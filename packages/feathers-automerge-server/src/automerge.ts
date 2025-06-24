@@ -1,9 +1,6 @@
 import { AnyDocumentId, Repo } from '@automerge/automerge-repo'
 import { Application, feathers } from '@feathersjs/feathers'
-import {
-  AutomergeService,
-  ServiceDataDocument
-} from '@kalisio/feathers-automerge'
+import { AutomergeService, ServiceDataDocument } from '@kalisio/feathers-automerge'
 
 export interface SyncServiceSettings {
   service: string
@@ -13,14 +10,12 @@ export interface SyncServiceSettings {
 
 export type AutomergeApplication = Application<any, { repo: Repo }>
 
-export function initSyncService (
+export function initSyncService(
   sync: SyncServiceSettings,
   automergeApp: AutomergeApplication,
   serverApp: Application
 ) {
-  const handle = automergeApp
-    .get('repo')
-    .find<ServiceDataDocument<any>>(sync.url as AnyDocumentId)
+  const handle = automergeApp.get('repo').find<ServiceDataDocument<any>>(sync.url as AnyDocumentId)
   const automergeService = new AutomergeService<any>(handle, {
     idField: sync.idField
   })
@@ -69,13 +64,11 @@ export function initSyncService (
   serverApp.service(sync.service).on('created', async (data) => {
     console.log('Server create', data)
 
-    const service = automergeApp.service(
-      sync.service
-    ) as unknown as AutomergeService<unknown>
+    const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
     const id = data[idField].toString()
 
-    if (data && doc && !doc[id]) {
+    if (data && doc && !doc.data[id]) {
       automergeApp
         .service(sync.service)
         .create(data)
@@ -84,21 +77,17 @@ export function initSyncService (
   })
 
   serverApp.service(sync.service).on('patched', async (data) => {
-    const service = automergeApp.service(
-      sync.service
-    ) as unknown as AutomergeService<unknown>
+    const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
     const { [idField]: _id, ...payload } = data
     const id = _id.toString()
 
     console.log('Server patch', payload)
 
-    if (doc && doc[id]) {
-      const docData = doc[id]
+    if (doc && doc.data[id]) {
+      const docData = doc.data[id]
       // Check if doc[data._id] is different than data
-      const isChanged = Object.keys(payload).some(
-        (key) => docData[key] !== payload[key]
-      )
+      const isChanged = Object.keys(payload).some((key) => (docData as any)[key] !== payload[key])
 
       if (isChanged) {
         automergeApp
@@ -110,21 +99,17 @@ export function initSyncService (
   })
 
   serverApp.service(sync.service).on('updated', async (data) => {
-    const service = automergeApp.service(
-      sync.service
-    ) as unknown as AutomergeService<unknown>
+    const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
     const { [idField]: _id, ...payload } = data
     const id = _id.toString()
 
     console.log('Server update', payload)
 
-    if (doc && doc[id]) {
-      const docData = doc[id]
+    if (doc && doc.data[id]) {
+      const docData = doc.data[id]
       // Check if doc[data._id] is different than data
-      const isChanged = Object.keys(payload).some(
-        (key) => docData[key] !== payload[key]
-      )
+      const isChanged = Object.keys(payload).some((key) => (docData as any)[key] !== payload[key])
 
       if (isChanged) {
         automergeApp
@@ -136,15 +121,13 @@ export function initSyncService (
   })
 
   serverApp.service(sync.service).on('removed', async (data) => {
-    const service = automergeApp.service(
-      sync.service
-    ) as unknown as AutomergeService<unknown>
+    const service = automergeApp.service(sync.service) as unknown as AutomergeService<unknown>
     const doc = await service.handle.doc()
     const id = data[idField].toString()
 
     console.log('Server remove', data)
 
-    if (doc && doc[id]) {
+    if (doc && doc.data[id]) {
       automergeApp
         .service(sync.service)
         .remove(id)
@@ -153,11 +136,7 @@ export function initSyncService (
   })
 }
 
-export async function createAutomergeApp (
-  app: Application,
-  repo: Repo,
-  syncs: SyncServiceSettings[]
-) {
+export async function createAutomergeApp(app: Application, repo: Repo, syncs: SyncServiceSettings[]) {
   const automergeApp = feathers()
 
   automergeApp.set('repo', repo)

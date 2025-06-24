@@ -1,4 +1,4 @@
-import { AnyDocumentId, Repo } from '@automerge/automerge-repo'
+import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import { AutomergeService, ServiceDataDocument } from '@kalisio/feathers-automerge'
 import {
@@ -9,9 +9,12 @@ import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs'
 import { WebSocketServer } from 'ws'
 import os from 'os'
 import type { Server as HttpServer } from 'http'
-import { SyncServiceSettings, createAutomergeApp } from './automerge-app.js'
+import { SyncServiceSettings, createAutomergeApp } from './automerge.js'
 
-export * from './automerge-app.js'
+export * from './automerge.js'
+
+const yellow = (text: string) => `\x1b[33m${text}\x1b[0m`
+const red = (text: string) => `\x1b[31m${text}\x1b[0m`
 
 export function createRepo(dir: string, wss: WebSocketServer | string, hostname: string = os.hostname()) {
   if (typeof wss === 'string') {
@@ -81,11 +84,20 @@ export function automergeServer() {
       })
     }
 
-    const mainDoc = options.document
-      ? repo.find<ServiceDataDocument<SyncServiceSettings>>(options.document as AnyDocumentId)
-      : repo.create<ServiceDataDocument<SyncServiceSettings>>()
+    let mainDoc: DocHandle<ServiceDataDocument<SyncServiceSettings>>
 
-    console.log(`Automerge main document is ${mainDoc.url}`)
+    if (options.document) {
+      mainDoc = repo.find<ServiceDataDocument<SyncServiceSettings>>(options.document as AnyDocumentId)
+      console.log(`Using existing document ${mainDoc.url}`)
+    } else {
+      mainDoc = repo.create<ServiceDataDocument<SyncServiceSettings>>({
+        service: 'automerge',
+        data: {}
+      })
+      console.log(
+        `\n\n${yellow('NOTE:')} Created new Automerge document ${mainDoc.url}. Please update your automerge.document configuration or AUTOMERGE_DOCUMENT environment variable accordingly.\n\n`
+      )
+    }
 
     app.use(
       'automerge',
@@ -99,7 +111,8 @@ export function automergeServer() {
     if (!options.document) {
       const syncs = options.services.map((service) => {
         const doc = repo.create({
-          service
+          service,
+          data: {}
         })
         const url = doc.url
 
@@ -118,5 +131,13 @@ export function automergeServer() {
         createAutomergeApp(app, repo, syncs)
       })
     }
+
+    mainDoc.on('unavailable', () => {
+      if (mainDoc) {
+        console.error(
+          `\n\n${red('ERROR:')} Automerge main document ${mainDoc.url} is not available on the local file system. Try removing the automerge.document configuration to intialize a new document and updating the configuration with the new URL.\n\n`
+        )
+      }
+    })
   }
 }

@@ -13,14 +13,14 @@ onMounted(async () => {
   })
 
   app.service('todos').on('patched', (patched: TodoItem) => {
-    const index = todos.value.findIndex(t => t._id === patched._id)
+    const index = todos.value.findIndex((t) => t._id === patched._id)
     if (index !== -1) {
       todos.value[index] = patched
     }
   })
 
   app.service('todos').on('removed', (removed: TodoItem) => {
-    todos.value = todos.value.filter(todo => todo._id !== removed._id)
+    todos.value = todos.value.filter((todo) => todo._id !== removed._id)
   })
 
   const result = await app.service('todos').find({
@@ -57,12 +57,12 @@ const removeTodo = async (id: string) => {
   <div class="todo-container">
     <h2>Todo List</h2>
     <div class="input-group">
-      <input v-model="newTodo" @keyup.enter="addTodo" placeholder="Add a new todo" type="text">
+      <input v-model="newTodo" @keyup.enter="addTodo" placeholder="Add a new todo" type="text" />
       <button @click="addTodo">Add</button>
     </div>
     <ul class="todo-list">
       <li v-for="todo in todos" :key="todo._id" :class="{ completed: todo.completed }">
-        <input type="checkbox" :checked="todo.completed" @change="toggleTodo(todo)">
+        <input type="checkbox" :checked="todo.completed" @change="toggleTodo(todo)" />
         <span class="todo-text">{{ todo.title }}</span>
         <button class="delete-btn" @click="removeTodo(todo._id)">Delete</button>
       </li>
@@ -83,7 +83,7 @@ const removeTodo = async (id: string) => {
   margin-bottom: 20px;
 }
 
-input[type="text"] {
+input[type='text'] {
   flex: 1;
   padding: 8px;
   border: 1px solid #ddd;

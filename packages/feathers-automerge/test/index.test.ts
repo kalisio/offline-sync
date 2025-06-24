@@ -18,7 +18,10 @@ describe('@kalisio/feathers-automerge', () => {
     people: AutomergeService<Person, PersonCreate>
   }>()
   const repo = new Repo()
-  const handle = repo.create<ServiceDataDocument<Person>>({})
+  const handle = repo.create<ServiceDataDocument<Person>>({
+    service: 'people',
+    data: {}
+  })
 
   app.use('people', new AutomergeService<Person>(handle))
 
@@ -34,10 +37,18 @@ describe('@kalisio/feathers-automerge', () => {
 
     assert.ok(person.id)
 
+    const createdEvent = new Promise<Person>((resolve) =>
+      app.service('people').once('created', (person) => {
+        resolve(person)
+      })
+    )
+
     await app.service('people').create({
       name: 'Jane Doe',
       age: 25
     })
+
+    assert.equal((await createdEvent).name, 'Jane Doe')
 
     const people = await app.service('people').find({
       paginate: true
