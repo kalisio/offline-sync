@@ -8,10 +8,7 @@ import type { EventEmitter } from 'node:events'
 import sift from 'sift'
 
 export interface ServiceDataDocument<T> {
-  service: string
-  data: {
-    [key: string]: T
-  }
+  [dataField: string]: Record<string, T>
 }
 
 export type IdGenerator = () => string
@@ -21,6 +18,7 @@ export interface AutomergeServiceOptions {
   idGenerator: IdGenerator
   matcher: any
   sorter: typeof sorter
+  dataField: string
 }
 
 // MongoDB ObjectId-like generator
@@ -65,6 +63,7 @@ export class AutomergeService<T, C = T> {
     this.options = {
       idField: options.idField ?? 'id',
       idGenerator: options.idGenerator ?? generateUUID,
+      dataField: options.dataField ?? 'data',
       matcher: sift,
       sorter,
       ...options
@@ -79,6 +78,10 @@ export class AutomergeService<T, C = T> {
     return this.options.idGenerator
   }
 
+  get dataField() {
+    return this.options.dataField
+  }
+
   async find(params: FindParams & { paginate: false }): Promise<T[]>
   async find(params: FindParams & { paginate?: true }): Promise<Paginated<T>>
   async find(params: FindParams & { paginate?: boolean }): Promise<T[] | Paginated<T>> {
@@ -90,7 +93,7 @@ export class AutomergeService<T, C = T> {
 
     const { $skip = 0, $limit = 10, $sort, ...query } = params.query ?? {}
 
-    let values = Object.values(doc.data || {})
+    let values = Object.values(doc[this.dataField] || {}) as T[]
     const hasQuery = Object.keys(query).length > 0
 
     if ($sort) {
@@ -123,11 +126,11 @@ export class AutomergeService<T, C = T> {
   async get(id: string) {
     const doc = await this.handle.doc()
 
-    if (doc == null || !doc.data[id]) {
+    if (doc == null || !doc[this.dataField][id]) {
       throw new Error(`Item ${id} not found`)
     }
 
-    return doc.data[id]
+    return doc[this.dataField][id]
   }
 
   async create(data: C) {
@@ -140,7 +143,10 @@ export class AutomergeService<T, C = T> {
     ) as T
 
     this.handle.change((doc) => {
-      doc.data[id] = item
+      if (!doc[this.dataField]) {
+        doc[this.dataField] = {}
+      }
+      doc[this.dataField][id] = item
     })
 
     return item
@@ -156,7 +162,7 @@ export class AutomergeService<T, C = T> {
     )
 
     this.handle.change((doc) => {
-      doc.data[id] = patched
+      doc[this.dataField][id] = patched
     })
 
     return patched
@@ -165,14 +171,14 @@ export class AutomergeService<T, C = T> {
   async remove(id: string) {
     const doc = await this.handle.doc()
 
-    if (doc == null || !doc.data[id]) {
+    if (doc == null || !doc[this.dataField][id]) {
       throw new Error(`Item ${id} not found`)
     }
 
-    const removed = doc.data[id]
+    const removed = doc[this.dataField][id]
 
     this.handle.change((doc) => {
-      delete doc.data[id]
+      delete doc[this.dataField][id]
     })
 
     return removed
@@ -188,16 +194,18 @@ export class AutomergeService<T, C = T> {
       }
 
       const ids = new Set(
-        patches.map((patch) => (patch.path[0] === 'data' ? patch.path[1] : null)).filter((id) => id != null)
+        patches
+          .map((patch) => (patch.path[0] === this.dataField ? patch.path[1] : null))
+          .filter((id) => id != null)
       )
 
       for (const id of ids) {
-        if (!before.data[id]) {
-          emitter.emit('created', after.data[id])
-        } else if (!after.data[id]) {
-          emitter.emit('removed', before.data[id])
-        } else if (before.data[id]) {
-          emitter.emit('patched', after.data[id])
+        if (!before[this.dataField][id]) {
+          emitter.emit('created', after[this.dataField][id])
+        } else if (!after[this.dataField][id]) {
+          emitter.emit('removed', before[this.dataField][id])
+        } else if (before[this.dataField][id]) {
+          emitter.emit('patched', after[this.dataField][id])
         }
       }
     })
