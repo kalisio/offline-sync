@@ -91,7 +91,6 @@ export function automergeServer() {
       console.log(`Using existing document ${mainDoc.url}`)
     } else {
       mainDoc = repo.create<ServiceDataDocument<SyncServiceSettings>>({
-        service: 'automerge',
         data: {}
       })
       console.log(
@@ -111,7 +110,6 @@ export function automergeServer() {
     if (!options.document) {
       const syncs = options.services.map((service) => {
         const doc = repo.create({
-          service,
           data: {}
         })
         const url = doc.url

@@ -19,7 +19,6 @@ describe('@kalisio/feathers-automerge', () => {
   }>()
   const repo = new Repo()
   const handle = repo.create<ServiceDataDocument<Person>>({
-    service: 'people',
     data: {}
   })
 
@@ -65,5 +64,43 @@ describe('@kalisio/feathers-automerge', () => {
     })
 
     assert.equal(matchedPeople.total, 1)
+  })
+
+  test('configurable dataField option', async () => {
+    // Create a service with custom dataField
+    const customHandle = repo.create<ServiceDataDocument<Person>>({
+      service: 'custom-people',
+      records: {} // Using 'records' instead of 'data'
+    })
+
+    const customService = new AutomergeService<Person>(customHandle, {
+      dataField: 'records'
+    })
+
+    app.use('custom-people', customService)
+
+    // Test that the custom dataField works
+    const person = await app.service('custom-people').create({
+      name: 'Custom Person',
+      age: 40
+    })
+
+    assert.ok(person.id)
+    assert.equal(person.name, 'Custom Person')
+
+    // Verify the document structure uses the custom field
+    const doc = await customHandle.doc()
+    assert.ok(doc)
+    assert.ok(doc.records)
+    assert.ok(doc.records[person.id])
+    assert.equal(doc.records[person.id].name, 'Custom Person')
+
+    // Test find operation works with custom dataField
+    const results = await app.service('custom-people').find({
+      paginate: false
+    })
+
+    assert.equal(results.length, 1)
+    assert.equal(results[0].name, 'Custom Person')
   })
 })

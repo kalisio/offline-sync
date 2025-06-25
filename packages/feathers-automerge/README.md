@@ -47,7 +47,27 @@ const handle = repo.find('automerge:2f9')
 const automergeTodoService = new AutomergeService<Todo>(handle, {
   idField: '_id',
   idGenerator: generateObjectId,
+  dataField: 'data', // Optional: customize the field name where records are stored (default: 'data')
 });
 
 app.use('todos', automergeService);
+```
+
+#### Options
+
+- `idField` (string): The field name to use as the primary key (default: 'id')
+- `idGenerator` (function): Function to generate IDs for new records (default: generateUUID)
+- `dataField` (string): The field name in the document where records are stored (default: 'data')
+- `matcher`: Query matching function (default: sift)
+- `sorter`: Sorting function (default: feathers sorter)
+
+#### Custom Data Field
+
+By default, the AutomergeService stores records in a `data` field within the document. You can customize this field name:
+
+```ts
+// Document structure will be: { service: 'todos', records: { ... } }
+const automergeTodoService = new AutomergeService<Todo>(handle, {
+  dataField: 'records'
+});
 ```

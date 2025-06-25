@@ -17,7 +17,8 @@ export function initSyncService(
 ) {
   const handle = automergeApp.get('repo').find<ServiceDataDocument<any>>(sync.url as AnyDocumentId)
   const automergeService = new AutomergeService<any>(handle, {
-    idField: sync.idField
+    idField: sync.idField,
+    dataField: sync.service
   })
   const idField = sync.idField || '_id'
 
@@ -68,7 +69,7 @@ export function initSyncService(
     const doc = await service.handle.doc()
     const id = data[idField].toString()
 
-    if (data && doc && !doc.data[id]) {
+    if (data && doc && !doc[automergeService.dataField][id]) {
       automergeApp
         .service(sync.service)
         .create(data)
@@ -84,8 +85,8 @@ export function initSyncService(
 
     console.log('Server patch', payload)
 
-    if (doc && doc.data[id]) {
-      const docData = doc.data[id]
+    if (doc && doc[automergeService.dataField][id]) {
+      const docData = doc[automergeService.dataField][id]
       // Check if doc[data._id] is different than data
       const isChanged = Object.keys(payload).some((key) => (docData as any)[key] !== payload[key])
 
@@ -106,8 +107,8 @@ export function initSyncService(
 
     console.log('Server update', payload)
 
-    if (doc && doc.data[id]) {
-      const docData = doc.data[id]
+    if (doc && doc[automergeService.dataField][id]) {
+      const docData = doc[automergeService.dataField][id]
       // Check if doc[data._id] is different than data
       const isChanged = Object.keys(payload).some((key) => (docData as any)[key] !== payload[key])
 
@@ -127,7 +128,7 @@ export function initSyncService(
 
     console.log('Server remove', data)
 
-    if (doc && doc.data[id]) {
+    if (doc && doc[automergeService.dataField][id]) {
       automergeApp
         .service(sync.service)
         .remove(id)
