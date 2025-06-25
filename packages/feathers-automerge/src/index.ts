@@ -183,7 +183,7 @@ export class AutomergeService<T, C = T> {
       const { before, after } = patchInfo
       const emitter = this as unknown as EventEmitter
 
-      if (Object.keys(before).length === 0 || typeof emitter.emit !== 'function') {
+      if (typeof emitter.emit !== 'function') {
         return
       }
 
@@ -192,11 +192,11 @@ export class AutomergeService<T, C = T> {
       )
 
       for (const id of ids) {
-        if (!before.data[id]) {
+        if (!before.data || !before.data[id]) {
           emitter.emit('created', after.data[id])
         } else if (!after.data[id]) {
           emitter.emit('removed', before.data[id])
-        } else if (before.data[id]) {
+        } else if (before.data && before.data[id]) {
           emitter.emit('patched', after.data[id])
         }
       }
