@@ -100,6 +100,7 @@ export function automergeServer() {
     }
 
     app.use(
+      // offline-directory
       'automerge',
       new AutomergeService(mainDoc, {
         idField: 'url'
