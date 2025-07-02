@@ -8,6 +8,7 @@
     "max": 50
   },
   "automerge": {
+    "document": "automerge:e4d1sGwWcYDE9Gg37fc1bpVTgzg",
     "directory": "../../data/automerge",
     "services": ["todos"]
   },

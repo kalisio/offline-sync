@@ -24,12 +24,19 @@ export function initSyncService(
   console.log('Setting up automerge service', sync.service)
   automergeApp.use(sync.service, automergeService)
 
-  automergeApp.service(sync.service).on('created', (data) => {
+  automergeApp.service(sync.service).on('created', async (data) => {
     console.log('Automerge app create', data)
-    serverApp
-      .service(sync.service)
-      .create(data)
-      .catch((e) => console.error(e))
+
+    try {
+      const { [idField]: _id } = data
+      const id = _id.toString()
+      await serverApp.service(sync.service).get(id)
+    } catch (error) {
+      await serverApp
+        .service(sync.service)
+        .create(data)
+        .catch((e) => console.error(e))
+    }
   })
 
   automergeApp.service(sync.service).on('patched', (data) => {

@@ -232,7 +232,7 @@ export function automergeClient(syncServerUrl: string) {
 
           for (const sync of syncs) {
             console.log('Registering automerge service', sync)
-            const handle = repo.find<ServiceDataDocument<unknown>>(sync.url)
+            const handle = await repo.find<ServiceDataDocument<unknown>>(sync.url)
             const automergeService = new AutomergeService<unknown>(handle, {
               idField: sync.idField,
               idGenerator: generateObjectId
