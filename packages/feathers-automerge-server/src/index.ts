@@ -1,4 +1,4 @@
-import { AnyDocumentId, DocHandle, PeerId, Repo } from '@automerge/automerge-repo'
+import { PeerId, Repo } from '@automerge/automerge-repo'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import {
   BrowserWebSocketClientAdapter,
@@ -8,9 +8,7 @@ import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs'
 import { WebSocketServer } from 'ws'
 import os from 'os'
 import type { Server as HttpServer } from 'http'
-import { AutomergeSyncServive, ServiceOptions } from './sync-service.js'
-
-export * from './automerge.js'
+import { AutomergeSyncServive, SyncServiceOptions } from './sync-service.js'
 
 export function createRepo(dir: string, wss?: WebSocketServer | string, hostname: string = os.hostname()) {
   if (!wss) {
@@ -50,7 +48,7 @@ export function createWss() {
   return new WebSocketServer({ noServer: true })
 }
 
-export interface ServerOptions extends ServiceOptions {
+export interface ServerOptions extends SyncServiceOptions {
   syncServerUrl?: string
   directory: string
 }

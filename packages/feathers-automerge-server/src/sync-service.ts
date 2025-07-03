@@ -1,6 +1,7 @@
 import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
-import { Application, getServiceOptions } from '@feathersjs/feathers'
+import { type Application } from '@feathersjs/feathers'
 import { NotFound } from '@feathersjs/errors'
+import feathers from '@feathersjs/feathers'
 
 type DocumentInfo = {
   name: string
@@ -15,8 +16,9 @@ type SyncConfig = {
   name: string
 }
 
-export interface ServiceOptions {
+export interface SyncServiceOptions {
   rootDocument: string
+  serverId: string
   initializeDocument(name: string, servicePath: string): Promise<unknown[]>
   getDocumentNames(data: unknown, servicePath: string): Promise<string[]>
 }
@@ -28,7 +30,7 @@ export class AutomergeSyncServive {
 
   constructor(
     public repo: Repo,
-    public options: ServiceOptions
+    public options: SyncServiceOptions
   ) {
     this.docHandles = {}
   }
@@ -87,7 +89,10 @@ export class AutomergeSyncServive {
         data[servicePath] = serviceData.reduce((res, current) => {
           return {
             ...(res as Record<string, unknown>),
-            [(current as any)[idField]]: current
+            [(current as any)[idField]]: {
+              ...(current as Record<string, unknown>),
+              __source: this.options.serverId
+            }
           }
         }, {})
       })
@@ -119,41 +124,45 @@ export class AutomergeSyncServive {
       throw new Error('Feathers application not available. Did you call app.listen() or app.setup()?')
     }
 
+    const { getDocumentNames, serverId } = this.options
     const service = this.app.service(servicePath)
-    const docNames = await this.options.getDocumentNames(data, servicePath)
+    const docNames = await getDocumentNames(data, servicePath)
     const idField = service.id || 'id'
+    const updateDocument = async (handle: DocHandle<unknown>) =>
+      new Promise<void>((resolve) => {
+        handle.change((doc: any) => {
+          const id = data[idField]
+
+          if (doc[servicePath]) {
+            if (eventName === 'removed' && doc[servicePath][id]) {
+              delete doc[servicePath][id]
+            }
+
+            if (['updated', 'patched', 'created'].includes(eventName)) {
+              doc[servicePath][id] = {
+                ...data,
+                __source: serverId
+              }
+            }
+          }
+          resolve()
+        })
+      })
 
     await Promise.all(
       docNames
         .map((name) => this.docHandles[name])
         .filter(Boolean)
-        .map(
-          async (handle) =>
-            new Promise<void>((resolve) => {
-              handle.change((doc: any) => {
-                const id = data[idField]
-
-                if (doc[servicePath]) {
-                  if (eventName === 'removed') {
-                    delete doc[servicePath][id]
-                  } else if (['updated', 'patched', 'created'].includes(eventName)) {
-                    doc[servicePath][id] = data
-                  }
-                }
-                resolve()
-              })
-            })
-        )
+        .map(updateDocument)
     )
   }
 
-  async handleDocument(info: DocumentInfo) {
-    const { name, url } = info
+  async handleDocument({ name, url }: DocumentInfo) {
     const handle = await this.repo.find(url as AnyDocumentId)
 
     this.docHandles[name] = handle
 
-    handle.on('change', ({ patches, patchInfo }) => {
+    handle.on('change', async ({ patches, patchInfo }) => {
       const { before, after } = patchInfo as any
       const serviceChanges: Record<string, Set<string>> = {}
 
@@ -163,19 +172,39 @@ export class AutomergeSyncServive {
         serviceChanges[path].add(id.toString())
       })
 
-      Object.keys(serviceChanges).forEach((path) => {
-        const ids = Array.from(serviceChanges[path])
+      await Promise.all(
+        Object.keys(serviceChanges).map(async (path) => {
+          const ids = Array.from(serviceChanges[path])
 
-        for (const id of ids) {
-          if (!before[path] || !before[path][id]) {
-            console.log(path, 'created', after[path][id])
-          } else if (!after[path][id]) {
-            console.log(path, 'removed', before[path][id])
-          } else if (before[path] && before[path][id]) {
-            console.log(path, 'patched', after[path][id])
+          if (!this.app) {
+            return
           }
-        }
-      })
+
+          for (const id of ids) {
+            try {
+              const { __source, ...data } = after[path][id] || before[path][id]
+              const isFromServer = __source === this.options.serverId
+
+              if (!before[path] || !before[path][id]) {
+                // Created
+                if (!isFromServer) {
+                  await this.app.service(path).create(data)
+                }
+              } else if (!after[path][id]) {
+                // Removed
+                await this.app.service(path).remove(id)
+              } else if (before[path] && before[path][id]) {
+                // Patched
+                if (!isFromServer) {
+                  await this.app.service(path).patch(id, data)
+                }
+              }
+            } catch (error: unknown) {
+              console.error(error)
+            }
+          }
+        })
+      )
     })
   }
 
@@ -190,10 +219,13 @@ export class AutomergeSyncServive {
     Object.keys(app.services).forEach((servicePath) => {
       if (servicePath !== myPath) {
         const service = app.service(servicePath)
-        const options = getServiceOptions(service)
+        const options = feathers.getServiceOptions(service)
 
         options.serviceEvents?.forEach((eventName) =>
-          service.on(eventName, async (data) => this.handleEvent(servicePath, eventName, data))
+          service.on(eventName, async (data) => {
+            const converted = JSON.parse(JSON.stringify(data))
+            this.handleEvent(servicePath, eventName, converted)
+          })
         )
       }
     })

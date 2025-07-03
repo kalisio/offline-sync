@@ -4,10 +4,10 @@ import path from 'node:path'
 import { feathers } from '@feathersjs/feathers'
 import { MemoryService } from '@feathersjs/memory'
 import express, { Application } from '@feathersjs/express'
-
-import { automergeServer, createRepo, createRootDocument } from '../src'
-import { AutomergeSyncServive } from '../src/sync-service'
 import { AnyDocumentId } from '@automerge/automerge-repo'
+
+import { automergeServer, createRootDocument } from '../src'
+import { AutomergeSyncServive } from '../src/sync-service'
 
 type Todo = {
   id: number
@@ -16,12 +16,15 @@ type Todo = {
   username: string
 }
 
+type ServicesDocument = { todos: Record<string, Todo> }
+
 describe('@kalisio/feathers-automerge-server', () => {
   // __dirname in es module
   const __dirname = fileURLToPath(new URL('.', import.meta.url))
   const directory = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test')
 
   let todo1: Todo
+  let todo2: Todo
   let app: Application<{
     todos: MemoryService<Todo>
     automerge: AutomergeSyncServive
@@ -36,6 +39,7 @@ describe('@kalisio/feathers-automerge-server', () => {
       automergeServer({
         directory,
         rootDocument: rootDoc.url,
+        serverId: 'test-server',
         async initializeDocument(name: string, servicePath: string) {
           if (name.startsWith('user') && servicePath === 'todos') {
             const [, username] = name.split('/')
@@ -63,7 +67,7 @@ describe('@kalisio/feathers-automerge-server', () => {
       username: 'testuser'
     })
 
-    await app.service('todos').create({
+    todo2 = await app.service('todos').create({
       title: 'My test todo',
       completed: false,
       username: 'otheruser'
@@ -100,13 +104,13 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     expect(info2.url).toEqual(info.url)
 
-    const newDocument = await app.service('automerge').repo.find(info.url as AnyDocumentId)
+    const newDocument = await app.service('automerge').repo.find<ServicesDocument>(info.url as AnyDocumentId)
     const newContents = newDocument.doc() as { todos: Record<string, Todo> }
 
     expect(newContents.todos).toBeDefined()
     expect(Object.values(newContents.todos).length).toBe(1)
 
-    const todo2 = await app.service('todos').create({
+    const latestTodo = await app.service('todos').create({
       title: 'New test todo',
       completed: false,
       username: 'testuser'
@@ -124,27 +128,76 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: todo1.id,
         title: 'Updated test todo',
         completed: true,
-        username: 'testuser'
+        username: 'testuser',
+        __source: 'test-server'
       },
       {
-        id: todo2.id,
+        id: latestTodo.id,
         title: 'New test todo',
         completed: false,
-        username: 'testuser'
+        username: 'testuser',
+        __source: 'test-server'
       }
     ])
 
-    await app.service('todos').remove(todo2.id)
+    await app.service('todos').remove(latestTodo.id)
 
-    const latestContents = newDocument.doc() as { todos: Record<string, Todo> }
+    const latestContents = newDocument.doc()
 
     expect(Object.values(latestContents.todos)).toEqual([
       {
         id: todo1.id,
         title: 'Updated test todo',
         completed: true,
-        username: 'testuser'
+        username: 'testuser',
+        __source: 'test-server'
       }
     ])
+  })
+
+  it('modifying the document syncs with service', async () => {
+    const info = await app.service('automerge').create({
+      name: 'user/otheruser'
+    })
+
+    expect(info.name).toBe('user/otheruser')
+
+    const newDocument = await app.service('automerge').repo.find<ServicesDocument>(info.url as AnyDocumentId)
+    const createdTodo = new Promise<Todo>((resolve) =>
+      app.service('todos').once('created', (todo) => resolve(todo))
+    )
+    const patchedTodo = new Promise<Todo>((resolve) =>
+      app.service('todos').once('patched', (todo) => resolve(todo))
+    )
+    const removedTodo = new Promise<Todo>((resolve) =>
+      app.service('todos').once('removed', (todo) => resolve(todo))
+    )
+
+    newDocument.change((doc) => {
+      doc.todos['3'] = {
+        id: 3,
+        title: 'Created in document',
+        completed: false,
+        username: 'otheruser'
+      }
+    })
+    expect(await createdTodo).toEqual(await app.service('todos').get(3))
+
+    newDocument.change((doc) => {
+      doc.todos['3'] = {
+        id: 3,
+        title: 'Updated in document',
+        completed: true,
+        username: 'otheruser'
+      }
+    })
+
+    expect(await patchedTodo).toEqual(await app.service('todos').get(3))
+    newDocument.change((doc) => {
+      delete doc.todos['3']
+    })
+
+    await removedTodo
+    await expect(() => app.service('todos').get(3)).rejects.toThrow()
   })
 })
