@@ -41,7 +41,31 @@ app.configure(
 app.configure(mongodb)
 
 app.configure(services)
-app.configure(automergeServer())
+// app.configure(
+//   automergeServer({
+//     directory: '../../data/automerge',
+//     rootDocument: 'automerge:e4d1sGwWcYDE9Gg37fc1bpVTgzg',
+//     serverId: 'test-server',
+//     async initializeDocument(name, servicePath) {
+//       if (name.startsWith('user') && servicePath === 'todos') {
+//         const [, username] = name.split('/')
+//         return app.service('todos').find({
+//           paginate: false,
+//           query: { username }
+//         })
+//       }
+
+//       return []
+//     },
+//     async getDocumentNames(data, servicePath) {
+//       if (servicePath === 'todos') {
+//         return [`user/${data.username}`]
+//       }
+
+//       return []
+//     }
+//   })
+// )
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler
