@@ -9,8 +9,15 @@ import { WebSocketServer } from 'ws'
 import os from 'os'
 import type { Server as HttpServer } from 'http'
 import { AutomergeSyncServive, SyncServiceOptions } from './sync-service.js'
+import createDebug from 'debug'
 
-export function createRepo(dir: string, wss?: WebSocketServer | string, hostname: string = os.hostname()) {
+const debug = createDebug('feathers-automerge-server')
+
+export function createRepo(
+  dir: string,
+  wss?: WebSocketServer | string,
+  peerId: string = `storage-server-${os.hostname()}`
+) {
   if (!wss) {
     return new Repo({
       network: [],
@@ -28,7 +35,7 @@ export function createRepo(dir: string, wss?: WebSocketServer | string, hostname
   return new Repo({
     network: [new NodeWSServerAdapter(wss as any)],
     storage: new NodeFSStorageAdapter(dir),
-    peerId: `storage-server-${hostname}` as PeerId,
+    peerId: peerId as PeerId,
     // Since this is a server, we don't share generously — meaning we only sync documents they already
     // know about and can ask for by ID.
     sharePolicy: async () => false
@@ -41,6 +48,9 @@ export async function createRootDocument(directory: string) {
     documents: []
   })
   await repo.flush()
+
+  debug(`Created root document ${doc.url}`)
+
   return doc
 }
 
@@ -60,6 +70,7 @@ export function handleWss(wss: WebSocketServer) {
 
       if (pathname === '/') {
         wss.handleUpgrade(request, socket, head, (socket) => {
+          debug('Handling sync-server websocket connection')
           wss.emit('connection', socket, request)
         })
       }
@@ -76,7 +87,9 @@ export function automergeServer(options: ServerOptions) {
     }
 
     const wss = options.syncServerUrl ? options.syncServerUrl : createWss()
-    const repo = createRepo(options.directory, wss)
+    const repo = createRepo(options.directory, wss, options.serverId)
+
+    debug('Initializing automerge service', options)
 
     if (wss instanceof WebSocketServer) {
       app.hooks({
@@ -84,6 +97,6 @@ export function automergeServer(options: ServerOptions) {
       })
     }
 
-    app.use('automerge', new AutomergeSyncServive(repo, options))
+    app.use(options.syncServicePath, new AutomergeSyncServive(repo, options))
   }
 }

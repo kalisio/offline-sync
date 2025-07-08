@@ -38,8 +38,9 @@ describe('@kalisio/feathers-automerge-server', () => {
     app.configure(
       automergeServer({
         directory,
-        rootDocument: rootDoc.url,
+        rootDocumentId: rootDoc.url,
         serverId: 'test-server',
+        syncServicePath: 'automerge',
         async initializeDocument(name: string, servicePath: string) {
           if (name.startsWith('user') && servicePath === 'todos') {
             const [, username] = name.split('/')
