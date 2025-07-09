@@ -92,7 +92,7 @@ export class AutomergeSyncServive {
         const idField = this.app?.service(servicePath).id || 'id'
 
         data.__meta[servicePath] = { idField }
-        data[servicePath] = serviceData.reduce((res, current) => {
+        data[servicePath] = serviceData.reduce<Record<string, unknown>>((res, current) => {
           return {
             ...(res as Record<string, unknown>),
             [(current as any)[idField]]: {

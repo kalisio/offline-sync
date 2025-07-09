@@ -20,7 +20,9 @@ export const app = feathers();
 const socket = io(FEATHERS_SERVER_URL, { transports: ["websocket"] });
 
 app.configure(socketio(socket));
-app.configure(automergeClient(SYNC_SERVER_URL));
+app.configure(automergeClient({
+  syncServerUrl: FEATHERS_SERVER_URL
+));
 
 // Use this asynchronously (to make sure everything is initialized)
 export async function getApp() {

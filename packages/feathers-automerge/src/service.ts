@@ -3,13 +3,7 @@ import type { EventEmitter } from 'node:events'
 import sift from 'sift'
 import { sorter } from '@feathersjs/adapter-commons'
 import { Params } from '@feathersjs/feathers'
-import { generateUUID } from './utils.js'
-
-export interface ServiceDataDocument<T> {
-  [path: string]: {
-    [key: string]: T
-  }
-}
+import { generateObjectId, generateUUID, SyncServiceDocument } from './utils.js'
 
 export type IdGenerator = () => string
 
@@ -32,14 +26,17 @@ export type FindParams = Params<Record<string, any>>
 
 export class AutomergeService<T, C = T> {
   events = ['created', 'patched', 'removed']
-  handle: DocHandle<ServiceDataDocument<T>>
+  handle: DocHandle<SyncServiceDocument>
   public options: AutomergeServiceOptions
 
-  constructor(handle: DocHandle<ServiceDataDocument<T>>, options: Partial<AutomergeServiceOptions> = {}) {
+  constructor(handle: DocHandle<SyncServiceDocument>, options: Partial<AutomergeServiceOptions> = {}) {
+    const idField = options.idField ?? 'id'
+    const idGenerator = options.idGenerator ?? (idField === '_id' ? generateObjectId : generateUUID)
+
     this.handle = handle
     this.options = {
-      idField: options.idField ?? 'id',
-      idGenerator: options.idGenerator ?? generateUUID,
+      idField,
+      idGenerator,
       matcher: sift,
       path: 'data',
       sorter,
@@ -66,7 +63,7 @@ export class AutomergeService<T, C = T> {
 
     const { $skip = 0, $limit = 10, $sort, ...query } = params.query ?? {}
 
-    let values = Object.values(doc[this.options.path] || {})
+    let values = Object.values(doc[this.options.path] || {}) as T[]
     const hasQuery = Object.keys(query).length > 0
 
     if ($sort) {
@@ -103,7 +100,7 @@ export class AutomergeService<T, C = T> {
       throw new Error(`Item ${id} not found`)
     }
 
-    return doc[this.options.path][id]
+    return doc[this.options.path][id] as T
   }
 
   async create(data: C) {

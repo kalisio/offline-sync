@@ -10,7 +10,7 @@ export type SyncServiceCreate = {
   services?: string[]
 }
 
-export type SyncServiceDocument = Record<string, unknown> & {
+export type SyncServiceDocument = Record<string, Record<string, unknown>> & {
   __meta: Record<string, { idField: string }>
 }
 

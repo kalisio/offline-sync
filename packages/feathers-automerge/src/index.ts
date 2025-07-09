@@ -1,13 +1,17 @@
-import type { AnyDocumentId } from '@automerge/automerge-repo'
+import type { AutomergeUrl, DocHandle } from '@automerge/automerge-repo'
 import { Repo } from '@automerge/automerge-repo'
 import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket'
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
 import { Application, NextFunction } from '@feathersjs/feathers'
-import { AutomergeService, type ServiceDataDocument } from './service.js'
-import { generateObjectId, SyncServiceInfo } from './utils.js'
+import { AutomergeService, IdGenerator } from './service.js'
+import { SyncServiceCreate, SyncServiceDocument, SyncServiceInfo } from './utils.js'
 
 export * from './service.js'
 export * from './utils.js'
+
+export const LOCALSTORAGE_KEY = 'feathers-automerge'
+
+export type SyncDocumentHandle = DocHandle<SyncServiceDocument>
 
 export function createBrowserRepo(wsUrl: string) {
   return new Repo({
@@ -16,50 +20,92 @@ export function createBrowserRepo(wsUrl: string) {
   })
 }
 
-export function getDocumentHandle<T>(repo: Repo, docId?: AnyDocumentId) {
-  if (docId != null) {
-    return repo.find<ServiceDataDocument<T>>(docId)
-  }
-
-  return repo.create<ServiceDataDocument<T>>()
-}
-
-export async function syncOffline(app: Application, options: any) {
+export async function getDocHandle(app: Application, url: AutomergeUrl): Promise<SyncDocumentHandle> {
   const repo: Repo = app.get('repo')
 
   if (!repo) {
     throw new Error('Repo not initialized on application')
   }
 
-  const info: SyncServiceInfo = await app.service('automerge').create(options)
+  return repo.find<SyncServiceDocument>(url)
+}
 
-  // const handle = await repo.find(info.url)
-  // const data = handle.doc()
+export async function initAutomergeServices(app: Application, url: AutomergeUrl) {
+  app.set('syncHandle', getDocHandle(app, url))
+
+  const handle: SyncDocumentHandle = await app.get('syncHandle')
+  const doc = handle.doc()
+
+  Object.keys(doc).forEach((path) => {
+    if (path !== '__meta') {
+      const { idField } = doc.__meta[path]
+
+      app.use(
+        path,
+        new AutomergeService(handle, {
+          idField,
+          path
+        })
+      )
+    }
+  })
+}
+
+export async function syncOffline(app: Application, payload: SyncServiceCreate) {
+  const info: SyncServiceInfo = await app.service('automerge').create(payload)
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem(LOCALSTORAGE_KEY, info.url)
+  }
+
+  await initAutomergeServices(app, info.url)
 
   return info
 }
 
-export async function stopSyncOffline(app: Application) {}
+export async function stopSyncOffline(app: Application) {
+  const handle: SyncDocumentHandle = await app.get('syncHandle')
 
-export function automergeClient(syncServerUrl: string) {
+  if (!handle) {
+    return
+  }
+
+  const doc = handle.doc()
+
+  await Promise.all(
+    Object.keys(doc).map(async (path) => {
+      if (path !== '__meta') {
+        await app.unuse(path)
+      }
+    })
+  )
+
+  app.set('syncHandle', null)
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.removeItem(LOCALSTORAGE_KEY)
+  }
+}
+
+export type AutomergeClientOptions = {
+  syncServerUrl: string
+  repo?: Repo
+}
+
+export function automergeClient(options: AutomergeClientOptions) {
   return function (app: Application) {
-    const repo = createBrowserRepo(syncServerUrl)
+    const repo = options.repo ?? createBrowserRepo(options.syncServerUrl)
 
     app.set('repo', repo)
-
     app.hooks({
       setup: [
         async (_context: unknown, next: NextFunction) => {
-          const { data: syncs } = await app.service('automerge').find()
+          if (typeof window !== 'undefined' && window.localStorage) {
+            const url = window.localStorage.getItem(LOCALSTORAGE_KEY)
 
-          for (const sync of syncs) {
-            console.log('Registering automerge service', sync)
-            const handle = await repo.find<ServiceDataDocument<unknown>>(sync.url)
-            const automergeService = new AutomergeService<unknown>(handle, {
-              idField: sync.idField,
-              idGenerator: generateObjectId
-            })
-            app.use(sync.service, automergeService)
+            if (url) {
+              await initAutomergeServices(app, url as AutomergeUrl)
+            }
           }
 
           await next()

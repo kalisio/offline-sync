@@ -24,6 +24,7 @@
     "sift": "^17.1.3"
   },
   "devDependencies": {
+    "@feathersjs/feathers": "^5.0.34",
     "@feathersjs/adapter-tests": "^5.0.34",
     "@types/node": "^24.0.10",
     "typescript": "^5.8.3",

@@ -2,7 +2,7 @@ import { describe, beforeAll, test } from 'vitest'
 import { feathers } from '@feathersjs/feathers'
 import assert from 'assert'
 
-import { AutomergeService, ServiceDataDocument } from '../src/index.js'
+import { AutomergeService, SyncServiceDocument } from '../src/index.js'
 import { Repo } from '@automerge/automerge-repo'
 
 describe('@kalisio/feathers-automerge', () => {
@@ -18,7 +18,10 @@ describe('@kalisio/feathers-automerge', () => {
     people: AutomergeService<Person, PersonCreate>
   }>()
   const repo = new Repo()
-  const handle = repo.create<ServiceDataDocument<Person>>({
+  const handle = repo.create<SyncServiceDocument>({
+    __meta: {
+      peeps: { idField: 'id' }
+    },
     peeps: {}
   })
 
