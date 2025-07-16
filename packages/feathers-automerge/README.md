@@ -10,7 +10,7 @@ With a @kalisio/feathers-automerge-server set up, the Automerge client can be us
 import { feathers } from "@feathersjs/feathers";
 import socketio from "@feathersjs/socketio-client";
 import io from "socket.io-client";
-import { automergeClient, AutomergeService } from "@kalisio/feathers-automerge";
+import { automergeClient, AutomergeService, syncOffline } from "@kalisio/feathers-automerge";
 
 const FEATHERS_SERVER_URL = "http://localhost:3030";
 // In a default setup the sync server is the same as the Feathers server
@@ -20,7 +20,9 @@ export const app = feathers();
 const socket = io(FEATHERS_SERVER_URL, { transports: ["websocket"] });
 
 app.configure(socketio(socket));
-app.configure(automergeClient(SYNC_SERVER_URL));
+app.configure(automergeClient({
+  syncServerUrl: FEATHERS_SERVER_URL
+));
 
 // Use this asynchronously (to make sure everything is initialized)
 export async function getApp() {
@@ -30,6 +32,19 @@ export async function getApp() {
 
   return app;
 }
+
+export async function useOffline(documentName: string) {
+  return syncOffline(app, documentName)
+}
+
+useOffline('user/<userId>', {
+  todos: {
+
+  },
+  map: {
+
+  }
+})
 ```
 
 ### AutomergeService

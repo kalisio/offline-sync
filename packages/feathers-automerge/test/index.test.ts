@@ -1,69 +1,59 @@
-import { describe, beforeAll, test } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { feathers } from '@feathersjs/feathers'
-import assert from 'assert'
-
-import { AutomergeService, ServiceDataDocument } from '../src/index.js'
+import { SyncServiceCreate, SyncServiceDocument } from '../src/utils.js'
+import { automergeClient, stopSyncOffline, syncOffline } from '../src/index.js'
 import { Repo } from '@automerge/automerge-repo'
 
-describe('@kalisio/feathers-automerge', () => {
-  type Person = {
-    id: number
-    name: string
-    age: number
+class DummySyncService {
+  constructor(public repo: Repo) {}
+
+  async create(data: SyncServiceCreate) {
+    const handle = this.repo.create<SyncServiceDocument>({
+      __meta: {
+        people: { idField: 'id' }
+      },
+      people: {}
+    })
+
+    return {
+      ...data,
+      url: handle.url
+    }
   }
+}
 
-  type PersonCreate = Omit<Person, 'id'>
-
-  const app = feathers<{
-    people: AutomergeService<Person, PersonCreate>
-  }>()
+describe('@kailisio/feathers-automerge', () => {
+  const app = feathers()
   const repo = new Repo()
-  const handle = repo.create<ServiceDataDocument<Person>>({
-    service: 'people',
-    data: {}
-  })
 
-  app.use('people', new AutomergeService<Person>(handle))
+  app.configure(
+    automergeClient({
+      syncServerUrl: 'http://localhost:3000',
+      syncServicePath: 'automerge',
+      repo
+    })
+  )
+  app.use('automerge', new DummySyncService(repo))
 
   beforeAll(async () => {
     await app.setup()
   })
 
-  test('basic functionality', async () => {
+  it('syncOffline and stopSyncOffline', async () => {
+    const info = await syncOffline(app, {
+      name: 'test'
+    })
+
+    expect(info.url.startsWith('automerge:'))
+
     const person = await app.service('people').create({
-      name: 'John Doe',
-      age: 30
+      name: 'Test Person'
     })
 
-    assert.ok(person.id)
+    expect(person).toBeDefined()
 
-    const createdEvent = new Promise<Person>((resolve) =>
-      app.service('people').once('created', (person) => {
-        resolve(person)
-      })
-    )
+    await stopSyncOffline(app)
 
-    await app.service('people').create({
-      name: 'Jane Doe',
-      age: 25
-    })
-
-    assert.equal((await createdEvent).name, 'Jane Doe')
-
-    const people = await app.service('people').find({
-      paginate: true
-    })
-
-    assert.equal(people.total, 2)
-    assert.equal(people.data.length, 2)
-
-    const matchedPeople = await app.service('people').find({
-      paginate: true,
-      query: {
-        name: 'Jane Doe'
-      }
-    })
-
-    assert.equal(matchedPeople.total, 1)
+    expect(() => app.service('people')).toThrow()
   })
 })

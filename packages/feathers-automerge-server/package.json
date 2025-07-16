@@ -9,6 +9,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "dev": "vitest watch",
     "compile": "rm -rf lib && tsc",
     "prepublish": "yarn run compile"
   },
@@ -16,18 +17,21 @@
   "author": "Kalisio",
   "license": "MIT",
   "dependencies": {
-    "@automerge/automerge-repo": "^1.2.1",
-    "@automerge/automerge-repo-network-websocket": "^1.2.1",
-    "@automerge/automerge-repo-storage-nodefs": "^1.2.1",
-    "@feathersjs/adapter-commons": "^5.0.33",
+    "@automerge/automerge-repo": "^2.0.7",
+    "@automerge/automerge-repo-network-websocket": "^2.0.7",
+    "@automerge/automerge-repo-storage-nodefs": "^2.0.7",
+    "@feathersjs/adapter-commons": "^5.0.34",
     "@kalisio/feathers-automerge": "^0.1.1",
+    "debug": "^4.4.1",
     "sift": "^17.1.3"
   },
   "devDependencies": {
-    "@feathersjs/adapter-tests": "^5.0.33",
-    "@types/node": "^20.11.19",
+    "@feathersjs/feathers": "^5.0.34",
+    "@feathersjs/memory": "^5.0.34",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^24.0.10",
     "@types/ws": "^8.18.1",
-    "typescript": "^5.3.3",
-    "vitest": "^3.1.2"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }
