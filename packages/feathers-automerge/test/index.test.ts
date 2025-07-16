@@ -41,10 +41,15 @@ describe('@kailisio/feathers-automerge', () => {
 
   it('syncOffline and stopSyncOffline', async () => {
     const info = await syncOffline(app, {
-      name: 'test'
+      query: {
+        userId: 'test'
+      }
     })
 
     expect(info.url.startsWith('automerge:'))
+    expect(info.query).toStrictEqual({
+      userId: 'test'
+    })
 
     const person = await app.service('people').create({
       name: 'Test Person'

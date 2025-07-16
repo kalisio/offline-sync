@@ -3,7 +3,8 @@ import { type Application } from '@feathersjs/feathers'
 import { NotFound } from '@feathersjs/errors'
 import feathers from '@feathersjs/feathers'
 import createDebug from 'debug'
-import { SyncServiceCreate, SyncServiceInfo, SyncServiceDocument } from '@kalisio/feathers-automerge'
+import _ from 'lodash'
+import { SyncServiceCreate, SyncServiceInfo, SyncServiceDocument, Query } from '@kalisio/feathers-automerge'
 
 const debug = createDebug('feathers-automerge-server/sync-service')
 
@@ -15,8 +16,12 @@ export interface SyncServiceOptions {
   rootDocumentId: string
   serverId: string
   syncServicePath: string
-  initializeDocument(name: string, servicePath: string): Promise<unknown[]>
-  getDocumentNames(data: unknown, servicePath: string): Promise<string[]>
+  initializeDocument(servicePath: string, query: Query, documents: SyncServiceInfo[]): Promise<unknown[]>
+  getDocumentsForData(
+    servicePath: string,
+    data: unknown,
+    documents: SyncServiceInfo[]
+  ): Promise<SyncServiceInfo[]>
 }
 
 export class AutomergeSyncServive {
@@ -45,12 +50,12 @@ export class AutomergeSyncServive {
     return doc.documents
   }
 
-  async get(name: string) {
+  async get(url: string) {
     const docs = await this.find()
-    const document = docs.find((document) => document.name === name)
+    const document = docs.find((document) => document.url === url)
 
     if (!document) {
-      throw new NotFound(`Document ${name} not found`)
+      throw new NotFound(`Document ${url} not found`)
     }
 
     return document
@@ -61,17 +66,20 @@ export class AutomergeSyncServive {
       throw new Error('Application not available')
     }
 
-    const docs = await this.find()
-    const { name, services: serviceNames } = payload
-    const existingDocument = docs.find((document) => document.name === name)
+    if (!this.rootDocument) {
+      throw new Error('Root document not available')
+    }
+
+    const docs = this.rootDocument.doc().documents
+    const { query } = payload
+    const existingDocument = docs.find((document) => _.isEqual(document.query, query))
 
     if (existingDocument) {
-      debug(`Returning existing document ${name}`)
+      debug(`Returning existing document ${existingDocument.url}`)
       return existingDocument
     }
 
-    const services =
-      serviceNames ?? Object.keys(this.app.services).filter((path) => path !== this.options.syncServicePath)
+    const services = Object.keys(this.app.services).filter((path) => path !== this.options.syncServicePath)
     const data = services.reduce(
       (res, path) => ({
         ...res,
@@ -88,7 +96,7 @@ export class AutomergeSyncServive {
           throw new Error(`Service path '__meta' is reserved`)
         }
 
-        const serviceData = await this.options.initializeDocument(name, servicePath)
+        const serviceData = await this.options.initializeDocument(servicePath, query, docs)
         const idField = this.app?.service(servicePath).id || 'id'
 
         data.__meta[servicePath] = { idField }
@@ -107,12 +115,12 @@ export class AutomergeSyncServive {
     const doc = this.repo.create(data)
     const url = doc.url
     const info = {
-      name,
-      url
+      url,
+      query
     }
     debug('Created new Automerge document', info)
 
-    this.docHandles[name] = doc
+    this.docHandles[url] = doc
 
     await new Promise<SyncServiceInfo>(async (resolve) => {
       this.rootDocument!.change((doc) => {
@@ -131,11 +139,16 @@ export class AutomergeSyncServive {
       throw new Error('Feathers application not available. Did you call app.listen() or app.setup()?')
     }
 
+    if (!this.rootDocument) {
+      throw new Error('Root document not available')
+    }
+
     debug(`Handling service event ${servicePath} ${eventName}`)
 
-    const { getDocumentNames, serverId } = this.options
+    const { getDocumentsForData, serverId } = this.options
+    const documents = this.rootDocument.doc().documents
     const service = this.app.service(servicePath)
-    const docNames = await getDocumentNames(data, servicePath)
+    const syncDocuments = await getDocumentsForData(servicePath, data, documents)
     const idField = service.id || 'id'
     const updateDocument = async (handle: DocHandle<unknown>) =>
       new Promise<void>((resolve) => {
@@ -161,23 +174,23 @@ export class AutomergeSyncServive {
       })
 
     await Promise.all(
-      docNames
-        .map((name) => this.docHandles[name])
+      syncDocuments
+        .map(({ url }) => this.docHandles[url])
         .filter(Boolean)
         .map(updateDocument)
     )
   }
 
-  async handleDocument({ name, url }: SyncServiceInfo) {
+  async handleDocument({ url }: SyncServiceInfo) {
     const handle = await this.repo.find(url)
 
-    this.docHandles[name] = handle
+    this.docHandles[url] = handle
 
     handle.on('change', async ({ patches, patchInfo }) => {
       const { before, after } = patchInfo as any
       const serviceChanges: Record<string, Set<string>> = {}
 
-      debug(`Handling change on document ${name}`)
+      debug(`Handling change on document ${url}`)
 
       patches.forEach((patch) => {
         const [path, id] = patch.path
