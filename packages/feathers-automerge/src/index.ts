@@ -13,6 +13,18 @@ export const LOCALSTORAGE_KEY = 'feathers-automerge'
 
 export type SyncDocumentHandle = DocHandle<SyncServiceDocument>
 
+export type AutomergeClientOptions = {
+  syncServerUrl: string
+  syncServicePath: string
+  repo?: Repo
+}
+
+export type AutomergeAppConfig = {
+  repo: Repo
+  syncOptions: AutomergeClientOptions
+  syncHandle: Promise<SyncDocumentHandle> | null
+}
+
 export function createBrowserRepo(wsUrl: string) {
   return new Repo({
     network: [new BrowserWebSocketClientAdapter(wsUrl)],
@@ -52,7 +64,8 @@ export async function initAutomergeServices(app: Application, url: AutomergeUrl)
 }
 
 export async function syncOffline(app: Application, payload: SyncServiceCreate) {
-  const info: SyncServiceInfo = await app.service('automerge').create(payload)
+  const { syncServicePath } = app.get('syncOptions') as AutomergeClientOptions
+  const info: SyncServiceInfo = await app.service(syncServicePath).create(payload)
 
   if (typeof window !== 'undefined' && window.localStorage) {
     window.localStorage.setItem(LOCALSTORAGE_KEY, info.url)
@@ -87,16 +100,14 @@ export async function stopSyncOffline(app: Application) {
   }
 }
 
-export type AutomergeClientOptions = {
-  syncServerUrl: string
-  repo?: Repo
-}
-
 export function automergeClient(options: AutomergeClientOptions) {
   return function (app: Application) {
     const repo = options.repo ?? createBrowserRepo(options.syncServerUrl)
 
+    app.set('syncOptions', options)
+    app.set('syncHandle', null)
     app.set('repo', repo)
+
     app.hooks({
       setup: [
         async (_context: unknown, next: NextFunction) => {

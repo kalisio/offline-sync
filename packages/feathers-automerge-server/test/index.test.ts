@@ -5,6 +5,7 @@ import { feathers } from '@feathersjs/feathers'
 import { MemoryService } from '@feathersjs/memory'
 import express, { Application } from '@feathersjs/express'
 import { AnyDocumentId } from '@automerge/automerge-repo'
+import { Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
 
 import { automergeServer, createRootDocument } from '../src'
 import { AutomergeSyncServive } from '../src/sync-service'
@@ -41,9 +42,9 @@ describe('@kalisio/feathers-automerge-server', () => {
         rootDocumentId: rootDoc.url,
         serverId: 'test-server',
         syncServicePath: 'automerge',
-        async initializeDocument(name: string, servicePath: string) {
-          if (name.startsWith('user') && servicePath === 'todos') {
-            const [, username] = name.split('/')
+        async initializeDocument(servicePath: string, query: Query) {
+          if (servicePath === 'todos') {
+            const { username } = query as { username: string }
             return app.service('todos').find({
               paginate: false,
               query: { username }
@@ -52,9 +53,9 @@ describe('@kalisio/feathers-automerge-server', () => {
 
           return []
         },
-        async getDocumentNames(data: unknown, servicePath: string) {
+        async getDocumentsForData(servicePath: string, data: unknown, documents: SyncServiceInfo[]) {
           if (servicePath === 'todos') {
-            return [`user/${(data as Todo).username}`]
+            return documents.filter((doc) => (data as Todo).username === doc.query.username)
           }
 
           return []
@@ -84,7 +85,7 @@ describe('@kalisio/feathers-automerge-server', () => {
   it('initialised the root document', async () => {
     expect(app.service('automerge').rootDocument).toBeDefined()
 
-    const doc = await app.service('automerge').rootDocument?.doc()
+    const doc = app.service('automerge').rootDocument?.doc()
 
     expect(doc).toEqual({
       documents: []
@@ -93,14 +94,20 @@ describe('@kalisio/feathers-automerge-server', () => {
 
   it('creates a new document, initialises with correct records and stays up to date', async () => {
     const info = await app.service('automerge').create({
-      name: 'user/testuser'
+      query: {
+        username: 'testuser'
+      }
     })
 
-    expect(info.name).toBe('user/testuser')
     expect(info.url.startsWith('automerge:')).toBe(true)
+    expect(info.query).toEqual({
+      username: 'testuser'
+    })
 
     const info2 = await app.service('automerge').create({
-      name: 'user/testuser'
+      query: {
+        username: 'testuser'
+      }
     })
 
     expect(info2.url).toEqual(info.url)
@@ -158,10 +165,14 @@ describe('@kalisio/feathers-automerge-server', () => {
 
   it('modifying the document syncs with service', async () => {
     const info = await app.service('automerge').create({
-      name: 'user/otheruser'
+      query: {
+        username: 'otheruser'
+      }
     })
 
-    expect(info.name).toBe('user/otheruser')
+    expect(info.query).toEqual({
+      username: 'otheruser'
+    })
 
     const newDocument = await app.service('automerge').repo.find<ServicesDocument>(info.url as AnyDocumentId)
     const createdTodo = new Promise<Todo>((resolve) =>

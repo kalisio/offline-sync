@@ -1,6 +1,6 @@
 # @kalisio/feathers-automerge-server
 
-Utilities to set up an automerge sync server that synchronizes documents with a Feathers API.
+Package to set up an automerge sync server that synchronizes documents with a Feathers API.
 
 ## Usage
 
@@ -11,15 +11,27 @@ import { automergeServer } from '@kalisio/feathers-automerge-server'
 
 //...
 app.configure(services)
-// This must be after your services are configured
 app.configure(automergeServer({
-  directory,
-  rootDocumentId,
-  serverId,
-  async initializeDocument(name: string, servicePath: string) {
+  directory: '<directory for automerge data storage>',
+  rootDocumentId: '<root document URL>',
+  serverId: 'test-server',
+  syncServicePath: 'automerge',
+  async initializeDocument(servicePath: string, query: Query) {
+    if (servicePath === 'todos') {
+      const { username } = query as { username: string }
+      return app.service('todos').find({
+        paginate: false,
+        query: { username }
+      })
+    }
+
     return []
   },
-  async getDocumentNames(data: unknown, servicePath: string) {
+  async getDocumentsForData(servicePath: string, data: unknown, documents: SyncServiceInfo[]) {
+    if (servicePath === 'todos') {
+      return documents.filter((doc) => (data as Todo).username === doc.query.username)
+    }
+
     return []
   }
 }))
@@ -27,10 +39,35 @@ app.configure(automergeServer({
 
 The following options are available:
 
-- `directory`: The directory where the automerge repository will be stored.
-- `rootDocumentId`: The root document id that stores information about the available documents. Use `createRootDocument` to initialize a new one.
-- `syncServicePath`: The service path where the sync service is registered.
-- `syncServerUrl`: Set this, if this server should not act as a sync server but instead synchronize with an existing other server.
-- `serverId`: A unique identifier for this server.
-- `initializeDocument(documentName, servicePath)`: For a given document name and service path, get the initial data for a new document.
-- `getDocumentNames(data, servicePath)`: For the given data and service path, return a list of document names the data can belong to.
+- `directory`: The directory where the automerge repository data will be stored.
+- `rootDocumentId`: The URL/ID of the root document that contains the list of all synchronized documents. See [initialization](#initialization) how to create it.
+- `serverId`: A unique identifier for this server instance (used to track data source).
+- `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
+- `syncServerUrl` (optional): URL of an external automerge sync server to connect to. If not provided, a local WebSocket server will be created.
+- `initializeDocument`: An async function that initializes document data for a given service path and query. Called when creating new documents.
+  - Parameters: `servicePath` (string), `query` (Query object), `documents` (array of existing SyncServiceInfo)
+  - Returns: Promise<unknown[]> - Array of initial data for the service
+- `getDocumentsForData`: An async function that determines which documents should be updated when service data changes.
+  - Parameters: `servicePath` (string), `data` (the changed data), `documents` (array of SyncServiceInfo)
+  - Returns: Promise<SyncServiceInfo[]> - Array of documents that should receive the update
+
+## Initialization
+
+To initialise the root document, create the following `initialize.ts` in your server  main directory:
+
+```ts
+import { createRootDocument } from '@kalisio/feathers-automerge-server'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+const directory = path.join(__dirname, '..', '..', 'data', 'automerge')
+
+createRootDocument(directory).then(doc => {
+  console.log(doc.url)
+}).catch(err => {
+  console.error(err)
+})
+```
+
+This file can be run directly and will output the URL that can be set as `rootDocumentId` in the configuration.
