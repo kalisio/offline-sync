@@ -51,14 +51,13 @@ export class AutomergeSyncServive {
   }
 
   async get(url: string) {
-    const docs = await this.find()
-    const document = docs.find((document) => document.url === url)
+    const handle = this.docHandles[url]
 
-    if (!document) {
+    if (!handle) {
       throw new NotFound(`Document ${url} not found`)
     }
 
-    return document
+    return handle.doc()
   }
 
   async create(payload: SyncServiceCreate) {
@@ -97,10 +96,11 @@ export class AutomergeSyncServive {
         }
 
         const serviceData = await this.options.initializeDocument(servicePath, query, docs)
+        const convertedData: unknown[] = JSON.parse(JSON.stringify(serviceData))
         const idField = this.app?.service(servicePath).id || 'id'
 
         data.__meta[servicePath] = { idField }
-        data[servicePath] = serviceData.reduce<Record<string, unknown>>((res, current) => {
+        data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
           return {
             ...(res as Record<string, unknown>),
             [(current as any)[idField]]: {
