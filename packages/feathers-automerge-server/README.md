@@ -40,7 +40,7 @@ app.configure(automergeServer({
 The following options are available:
 
 - `directory`: The directory where the automerge repository data will be stored.
-- `rootDocumentId`: The URL/ID of the root document that contains the list of all synchronized documents.
+- `rootDocumentId`: The URL/ID of the root document that contains the list of all synchronized documents. See [initialization](#initialization) how to create it.
 - `serverId`: A unique identifier for this server instance (used to track data source).
 - `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
 - `syncServerUrl` (optional): URL of an external automerge sync server to connect to. If not provided, a local WebSocket server will be created.
@@ -50,3 +50,24 @@ The following options are available:
 - `getDocumentsForData`: An async function that determines which documents should be updated when service data changes.
   - Parameters: `servicePath` (string), `data` (the changed data), `documents` (array of SyncServiceInfo)
   - Returns: Promise<SyncServiceInfo[]> - Array of documents that should receive the update
+
+## Initialization
+
+To initialise the root document, create the following `initialize.ts` in your server  main directory:
+
+```ts
+import { createRootDocument } from '@kalisio/feathers-automerge-server'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
+const directory = path.join(__dirname, '..', '..', 'data', 'automerge')
+
+createRootDocument(directory).then(doc => {
+  console.log(doc.url)
+}).catch(err => {
+  console.error(err)
+})
+```
+
+This file can be run directly and will output the URL that can be set as `rootDocumentId` in the configuration.
