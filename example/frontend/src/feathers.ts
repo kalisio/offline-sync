@@ -14,6 +14,7 @@ const FEATHERS_SERVER_URL = (import.meta.env.VITE_FEATHERS_SERVER_URL as string)
 export interface Todo {
   title: string
   completed: boolean
+  username?: string
 }
 
 export type TodoItem = Todo & {

@@ -5,11 +5,19 @@ import { getApp, type TodoItem } from '../feathers.js'
 const newTodo = ref('')
 const todos = ref<TodoItem[]>([])
 
+// Get username from URL query parameters
+const getUsername = () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  return urlParams.get('username') || 'anonymous'
+}
+
 onMounted(async () => {
   const app = await getApp()
 
   app.service('todos').on('created', (created: TodoItem) => {
-    todos.value.push(created)
+    if (created.username === getUsername()) {
+      todos.value.push(created)
+    }
   })
 
   app.service('todos').on('patched', (patched: TodoItem) => {
@@ -24,7 +32,13 @@ onMounted(async () => {
   })
 
   const result = await app.service('todos').find({
-    paginate: true
+    paginate: true,
+    query: {
+      username: getUsername()
+    }
+  })
+  console.log({
+    username: getUsername()
   })
   todos.value = result.data
 })
@@ -34,7 +48,8 @@ const addTodo = async () => {
     const app = await getApp()
     await app.service('todos').create({
       title: newTodo.value,
-      completed: false
+      completed: false,
+      username: getUsername()
     })
     newTodo.value = ''
   }
@@ -64,6 +79,7 @@ const removeTodo = async (id: string) => {
       <li v-for="todo in todos" :key="todo._id" :class="{ completed: todo.completed }">
         <input type="checkbox" :checked="todo.completed" @change="toggleTodo(todo)" />
         <span class="todo-text">{{ todo.title }}</span>
+        <span class="username" v-if="todo.username">by {{ todo.username }}</span>
         <button class="delete-btn" @click="removeTodo(todo._id)">Delete</button>
       </li>
     </ul>
@@ -129,5 +145,11 @@ button:hover {
 
 .delete-btn:hover {
   background-color: #cc3333;
+}
+
+.username {
+  font-size: 0.8em;
+  color: #666;
+  font-style: italic;
 }
 </style>
