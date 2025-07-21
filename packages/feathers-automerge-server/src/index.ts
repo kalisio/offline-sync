@@ -57,15 +57,16 @@ export function createWss() {
 
 export interface ServerOptions extends SyncServiceOptions {
   syncServerUrl?: string
+  syncServerWsPath?: string
   directory: string
 }
 
-export function handleWss(wss: WebSocketServer) {
+export function handleWss(wss: WebSocketServer, options: ServerOptions) {
   return async (context: { server: HttpServer }, next: NextFunction) => {
     context.server.on('upgrade', (request, socket, head) => {
       const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname
 
-      if (pathname === '/') {
+      if (pathname === '/' + (options.syncServerWsPath || '')) {
         wss.handleUpgrade(request, socket, head, (socket) => {
           debug('Handling sync-server websocket connection')
           wss.emit('connection', socket, request)
@@ -90,7 +91,7 @@ export function automergeServer(options: ServerOptions) {
 
     if (wss instanceof WebSocketServer) {
       app.hooks({
-        setup: [handleWss(wss)]
+        setup: [handleWss(wss, options)]
       })
     }
 
