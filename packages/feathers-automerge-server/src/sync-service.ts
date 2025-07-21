@@ -41,7 +41,7 @@ export class AutomergeSyncServive {
       throw new Error('Root document not available. Did you call app.listen() or app.setup()?')
     }
 
-    const doc = this.rootDocument.doc()
+    const doc = await this.rootDocument.doc()
 
     if (!doc) {
       throw new Error('Root document not available')

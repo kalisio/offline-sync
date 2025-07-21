@@ -55,7 +55,7 @@ export class AutomergeService<T, C = T> {
   async find(params: FindParams & { paginate: false }): Promise<T[]>
   async find(params: FindParams & { paginate?: true }): Promise<Paginated<T>>
   async find(params: FindParams & { paginate?: boolean }): Promise<T[] | Paginated<T>> {
-    const doc = this.handle.doc()
+    const doc = await this.handle.doc()
 
     if (!doc) {
       throw new Error('Document not loaded')
@@ -94,8 +94,8 @@ export class AutomergeService<T, C = T> {
   }
 
   async get(id: string) {
-    const doc = this.handle.doc()
-
+    const doc = await this.handle.doc()
+    
     if (doc == null || !doc[this.options.path][id]) {
       throw new Error(`Item ${id} not found`)
     }
@@ -136,7 +136,7 @@ export class AutomergeService<T, C = T> {
   }
 
   async remove(id: string) {
-    const doc = this.handle.doc()
+    const doc = await this.handle.doc()
 
     if (doc == null || !doc[this.options.path][id]) {
       throw new Error(`Item ${id} not found`)

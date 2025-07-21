@@ -46,7 +46,7 @@ export async function initAutomergeServices(app: Application, url: AutomergeUrl)
   app.set('syncHandle', getDocHandle(app, url))
 
   const handle: SyncDocumentHandle = await app.get('syncHandle')
-  const doc = handle.doc()
+  const doc = await handle.doc()
 
   Object.keys(doc).forEach((path) => {
     if (path !== '__meta') {
@@ -83,7 +83,7 @@ export async function stopSyncOffline(app: Application) {
     return
   }
 
-  const doc = handle.doc()
+  const doc = await handle.doc()
 
   await Promise.all(
     Object.keys(doc).map(async (path) => {
