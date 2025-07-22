@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import Todo from './components/Todo.vue'
-import { useOffline, stopOffline, getApp } from './feathers'
+import { useOffline, stopOffline, getApp, getUsername } from './feathers'
 
 const isOffline = ref(false)
 const isToggling = ref(false)
@@ -21,16 +21,9 @@ async function toggleOffline() {
       await stopOffline()
       isOffline.value = false
     } else {
-      // Parse query string from current URL
-      const urlParams = new URLSearchParams(window.location.search)
-      const query: any = {}
-
-      // Convert URLSearchParams to object
-      for (const [key, value] of urlParams) {
-        query[key] = value
-      }
-
-      await useOffline(query)
+      await useOffline({
+        username: getUsername()
+      })
       isOffline.value = true
     }
   } catch (error) {
@@ -62,7 +55,7 @@ async function toggleOffline() {
       </p>
     </div>
 
-    <div class="users-section">
+    <div class="users-section" v-if="!isOffline">
       <h2>Switch Users</h2>
       <div class="users-list">
         <a v-for="user in users" :key="user" :href="`?username=${user}`" class="user-link">

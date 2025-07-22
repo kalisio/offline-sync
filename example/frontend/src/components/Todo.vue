@@ -1,15 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getApp, type TodoItem } from '../feathers.js'
+import { getApp, getUsername, type TodoItem } from '../feathers.js'
 
 const newTodo = ref('')
 const todos = ref<TodoItem[]>([])
-
-// Get username from URL query parameters
-const getUsername = () => {
-  const urlParams = new URLSearchParams(window.location.search)
-  return urlParams.get('username') || 'anonymous'
-}
 
 onMounted(async () => {
   const app = await getApp()
@@ -36,9 +30,6 @@ onMounted(async () => {
     query: {
       username: getUsername()
     }
-  })
-  console.log({
-    username: getUsername()
   })
   todos.value = result.data
 })

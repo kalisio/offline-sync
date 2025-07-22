@@ -23,6 +23,11 @@ export type TodoItem = Todo & {
 
 type TodoService = AutomergeService<Todo>
 
+export const getUsername = () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  return urlParams.get('username') || 'anonymous'
+}
+
 export const app = feathers<{ todos: TodoService; automerge: any }>()
 const socket = io(FEATHERS_SERVER_URL, { transports: ['websocket'] })
 
