@@ -41,31 +41,32 @@ app.configure(
 app.configure(mongodb)
 
 app.configure(services)
-// app.configure(
-//   automergeServer({
-//     directory: '../../data/automerge',
-//     rootDocument: 'automerge:e4d1sGwWcYDE9Gg37fc1bpVTgzg',
-//     serverId: 'test-server',
-//     async initializeDocument(name, servicePath) {
-//       if (name.startsWith('user') && servicePath === 'todos') {
-//         const [, username] = name.split('/')
-//         return app.service('todos').find({
-//           paginate: false,
-//           query: { username }
-//         })
-//       }
+app.configure(
+  automergeServer({
+    directory: '../../data/automerge',
+    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT || 'automerge:4226MK5wNEeYm6pqtE6mzx2wc2Lc',
+    serverId: 'test-server',
+    syncServicePath: 'automerge',
+    async initializeDocument(servicePath, query) {
+      if (servicePath === 'todos') {
+        const { username } = query
+        return app.service('todos').find({
+          paginate: false,
+          query: { username }
+        })
+      }
 
-//       return []
-//     },
-//     async getDocumentNames(data, servicePath) {
-//       if (servicePath === 'todos') {
-//         return [`user/${data.username}`]
-//       }
+      return []
+    },
+    async getDocumentsForData(servicePath, data, documents) {
+      if (servicePath === 'todos') {
+        return documents.filter(doc => data.username === doc.query.username)
+      }
 
-//       return []
-//     }
-//   })
-// )
+      return []
+    }
+  })
+)
 app.configure(channels)
 
 // Configure a middleware for 404s and the error handler

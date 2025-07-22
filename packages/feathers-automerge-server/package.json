@@ -23,12 +23,14 @@
     "@feathersjs/adapter-commons": "^5.0.34",
     "@kalisio/feathers-automerge": "^0.1.1",
     "debug": "^4.4.1",
+    "lodash": "^4.17.21",
     "sift": "^17.1.3"
   },
   "devDependencies": {
     "@feathersjs/feathers": "^5.0.34",
     "@feathersjs/memory": "^5.0.34",
     "@types/debug": "^4.1.12",
+    "@types/lodash": "^4.17.10",
     "@types/node": "^24.0.10",
     "@types/ws": "^8.18.1",
     "typescript": "^5.8.3",

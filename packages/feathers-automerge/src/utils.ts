@@ -1,13 +1,16 @@
 import { AutomergeUrl } from '@automerge/automerge-repo'
 
+export interface Query {
+  [key: string]: any
+}
+
 export type SyncServiceInfo = {
-  name: string
   url: AutomergeUrl
+  query: Query
 }
 
 export type SyncServiceCreate = {
-  name: string
-  services?: string[]
+  query: Query
 }
 
 export type SyncServiceDocument = Record<string, Record<string, unknown>> & {
