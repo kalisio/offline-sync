@@ -4,7 +4,7 @@ import { NotFound } from '@feathersjs/errors'
 import feathers from '@feathersjs/feathers'
 import createDebug from 'debug'
 import _ from 'lodash'
-import { SyncServiceCreate, SyncServiceInfo, SyncServiceDocument, Query } from '@kalisio/feathers-automerge'
+import { SyncServiceCreate, SyncServiceInfo, SyncServiceDocument, Query, generateObjectId } from '@kalisio/feathers-automerge'
 
 const debug = createDebug('feathers-automerge-server/sync-service')
 
@@ -101,9 +101,10 @@ export class AutomergeSyncServive {
 
         data.__meta[servicePath] = { idField }
         data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
+          const id = (current as any)[idField] || generateObjectId()
           return {
             ...(res as Record<string, unknown>),
-            [(current as any)[idField]]: {
+            [id]: {
               ...(current as Record<string, unknown>),
               __source: this.options.serverId
             }
