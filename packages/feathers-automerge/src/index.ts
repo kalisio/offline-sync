@@ -50,12 +50,13 @@ export async function initAutomergeServices(app: Application, url: AutomergeUrl)
 
   Object.keys(doc).forEach((path) => {
     if (path !== '__meta') {
-      const { idField } = doc.__meta[path]
+      const { idField, paginate } = doc.__meta[path]
 
       app.use(
         path,
         new AutomergeService(handle, {
           idField,
+          paginate,
           path
         })
       )

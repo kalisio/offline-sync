@@ -2,6 +2,7 @@ import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
 import { type Application } from '@feathersjs/feathers'
 import { NotFound } from '@feathersjs/errors'
 import feathers from '@feathersjs/feathers'
+import { AdapterServiceOptions } from '@feathersjs/adapter-commons'
 import createDebug from 'debug'
 import _ from 'lodash'
 import { SyncServiceCreate, SyncServiceInfo, SyncServiceDocument, Query, generateObjectId } from '@kalisio/feathers-automerge'
@@ -94,12 +95,14 @@ export class AutomergeSyncServive {
         if (servicePath === '__meta') {
           throw new Error(`Service path '__meta' is reserved`)
         }
-
+        const service = this.app?.service(servicePath)
+        const serviceOptions = feathers.getServiceOptions(service) as AdapterServiceOptions
         const serviceData = await this.options.initializeDocument(servicePath, query, docs)
         const convertedData: unknown[] = JSON.parse(JSON.stringify(serviceData))
-        const idField = this.app?.service(servicePath).id || 'id'
+        const idField = service?.id || 'id'
+        const paginate = serviceOptions?.paginate || { default: 10, max: 10 }
 
-        data.__meta[servicePath] = { idField }
+        data.__meta[servicePath] = { idField, paginate }
         data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
           const id = (current as any)[idField] || generateObjectId()
           return {

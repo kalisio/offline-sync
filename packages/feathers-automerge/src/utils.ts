@@ -1,4 +1,5 @@
 import { AutomergeUrl } from '@automerge/automerge-repo'
+import { PaginationParams } from '@feathersjs/feathers'
 
 export interface Query {
   [key: string]: any
@@ -14,7 +15,7 @@ export type SyncServiceCreate = {
 }
 
 export type SyncServiceDocument = Record<string, Record<string, unknown>> & {
-  __meta: Record<string, { idField: string }>
+  __meta: Record<string, { idField: string, paginate: PaginationParams }>
 }
 
 // MongoDB ObjectId-like generator
