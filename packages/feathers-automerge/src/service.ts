@@ -1,8 +1,8 @@
 import type { DocHandle } from '@automerge/automerge-repo'
 import type { EventEmitter } from 'node:events'
 import sift from 'sift'
-import { sorter } from '@feathersjs/adapter-commons'
-import { Params } from '@feathersjs/feathers'
+import { sorter, getLimit } from '@feathersjs/adapter-commons'
+import { Params, PaginationParams } from '@feathersjs/feathers'
 import { generateObjectId, generateUUID, SyncServiceDocument } from './utils.js'
 
 export type IdGenerator = () => string
@@ -13,6 +13,7 @@ export interface AutomergeServiceOptions {
   idGenerator: IdGenerator
   matcher: any
   sorter: typeof sorter
+  paginate?: PaginationParams
 }
 
 export interface Paginated<T> {
@@ -60,8 +61,9 @@ export class AutomergeService<T, C = T> {
     if (!doc) {
       throw new Error('Document not loaded')
     }
-
-    const { $skip = 0, $limit = 10, $sort, ...query } = params.query ?? {}
+    const paginate = params.paginate !== undefined ? params.paginate : this.options.paginate
+    let { $skip, $limit, $sort, ...query } = params.query ?? {}
+    $limit = getLimit($limit, this.options.paginate)
 
     let values = Object.values(doc[this.options.path] || {}) as T[]
     const hasQuery = Object.keys(query).length > 0
@@ -74,7 +76,7 @@ export class AutomergeService<T, C = T> {
       values = values.filter(this.options.matcher(query))
     }
 
-    if (params.paginate !== false) {
+    if (paginate !== false) {
       const total = values.length
 
       values = values.slice($skip)
