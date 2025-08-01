@@ -52,17 +52,17 @@
     "@feathersjs/schema": "^5.0.34",
     "@feathersjs/socketio": "^5.0.34",
     "@feathersjs/transport-commons": "^5.0.34",
-    "compression": "^1.8.0",
-    "mongodb": "^6.16.0",
+    "compression": "^1.8.1",
+    "mongodb": "^6.17.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {
     "@feathersjs/cli": "^5.0.34",
     "@feathersjs/rest-client": "^5.0.34",
-    "axios": "^1.9.0",
+    "axios": "^1.10.0",
     "cross-env": "^7.0.3",
-    "mocha": "^11.5.0",
+    "mocha": "^11.7.1",
     "nodemon": "^3.1.10",
-    "prettier": "^3.5.3"
+    "prettier": "^3.6.2"
   }
 }

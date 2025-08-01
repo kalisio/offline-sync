@@ -17,9 +17,9 @@
   "author": "Kalisio",
   "license": "MIT",
   "dependencies": {
-    "@automerge/automerge-repo": "^2.0.7",
-    "@automerge/automerge-repo-network-websocket": "^2.0.7",
-    "@automerge/automerge-repo-storage-nodefs": "^2.0.7",
+    "@automerge/automerge-repo": "^2.1.0",
+    "@automerge/automerge-repo-network-websocket": "^2.1.0",
+    "@automerge/automerge-repo-storage-nodefs": "^2.1.0",
     "@feathersjs/adapter-commons": "^5.0.34",
     "@kalisio/feathers-automerge": "^0.1.1",
     "debug": "^4.4.1",
@@ -30,8 +30,8 @@
     "@feathersjs/feathers": "^5.0.34",
     "@feathersjs/memory": "^5.0.34",
     "@types/debug": "^4.1.12",
-    "@types/lodash": "^4.17.10",
-    "@types/node": "^24.0.10",
+    "@types/lodash": "^4.17.20",
+    "@types/node": "^24.1.0",
     "@types/ws": "^8.18.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
