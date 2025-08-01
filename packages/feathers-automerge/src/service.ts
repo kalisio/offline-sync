@@ -97,7 +97,7 @@ export class AutomergeService<T, C = T> {
 
   async get(id: string) {
     const doc = await this.handle.doc()
-    
+
     if (doc == null || !doc[this.options.path][id]) {
       throw new Error(`Item ${id} not found`)
     }
@@ -122,19 +122,18 @@ export class AutomergeService<T, C = T> {
   }
 
   async patch(id: string, data: Partial<T>) {
-    const item = await this.get(id)
-    const patched = JSON.parse(
-      JSON.stringify({
-        ...item,
-        ...data
+    return new Promise<T>((resolve) =>
+      this.handle.change((doc) => {
+        Object.keys(data).forEach((_prop) => {
+          const prop = _prop as keyof T
+          const item = doc[this.options.path][id] as any
+
+          item[prop] = data[prop]
+        })
+
+        resolve(doc[this.options.path][id] as T)
       })
     )
-
-    this.handle.change((doc) => {
-      doc[this.options.path][id] = patched
-    })
-
-    return patched
   }
 
   async remove(id: string) {

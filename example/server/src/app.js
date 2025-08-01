@@ -44,7 +44,7 @@ app.configure(services)
 app.configure(
   automergeServer({
     directory: '../../data/automerge',
-    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT || 'automerge:4226MK5wNEeYm6pqtE6mzx2wc2Lc',
+    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT || 'automerge:3po5JQXjBoEDj2Bszbk3nujsiDVo',
     serverId: 'test-server',
     syncServicePath: 'automerge',
     async initializeDocument(servicePath, query) {

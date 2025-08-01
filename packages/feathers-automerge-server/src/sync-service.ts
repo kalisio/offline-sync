@@ -5,7 +5,13 @@ import feathers from '@feathersjs/feathers'
 import { AdapterServiceOptions } from '@feathersjs/adapter-commons'
 import createDebug from 'debug'
 import _ from 'lodash'
-import { SyncServiceCreate, SyncServiceInfo, SyncServiceDocument, Query, generateObjectId } from '@kalisio/feathers-automerge'
+import {
+  SyncServiceCreate,
+  SyncServiceInfo,
+  SyncServiceDocument,
+  Query,
+  generateObjectId
+} from '@kalisio/feathers-automerge'
 
 const debug = createDebug('feathers-automerge-server/sync-service')
 
@@ -104,7 +110,7 @@ export class AutomergeSyncServive {
 
         data.__meta[servicePath] = { idField, paginate }
         data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
-          const id = (current as any)[idField] || generateObjectId()
+          const id = (current as any)[idField] ?? generateObjectId()
           return {
             ...(res as Record<string, unknown>),
             [id]: {
