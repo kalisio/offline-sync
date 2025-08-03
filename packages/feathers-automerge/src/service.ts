@@ -1,4 +1,4 @@
-import type { DocHandle } from '@automerge/automerge-repo'
+import type { DocHandle, UrlHeads } from '@automerge/automerge-repo'
 import type { EventEmitter } from 'node:events'
 import sift from 'sift'
 import { sorter, getLimit } from '@feathersjs/adapter-commons'
@@ -28,6 +28,7 @@ export type FindParams = Params<Record<string, any>>
 export class AutomergeService<T, C = T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<SyncServiceDocument>
+  docHeads: unknown[] = []
   public options: AutomergeServiceOptions
 
   constructor(handle: DocHandle<SyncServiceDocument>, options: Partial<AutomergeServiceOptions> = {}) {
@@ -122,16 +123,19 @@ export class AutomergeService<T, C = T> {
   }
 
   async patch(id: string, data: Partial<T>) {
+    const { path } = this.options
     return new Promise<T>((resolve) =>
       this.handle.change((doc) => {
+        const item = doc[path][id] as any
+
         Object.keys(data).forEach((_prop) => {
           const prop = _prop as keyof T
-          const item = doc[this.options.path][id] as any
 
           item[prop] = data[prop]
         })
+        delete item.__source
 
-        resolve(doc[this.options.path][id] as T)
+        resolve(doc[path][id] as T)
       })
     )
   }
@@ -153,13 +157,21 @@ export class AutomergeService<T, C = T> {
   }
 
   async setup() {
-    this.handle.on('change', ({ patches, patchInfo }) => {
+    this.handle.on('change', ({ patches, patchInfo, handle }) => {
       const { before, after } = patchInfo
       const emitter = this as unknown as EventEmitter
+      const heads = handle.heads()
 
       if (typeof emitter.emit !== 'function') {
         return
       }
+
+      // Only continue if document head has moved
+      if (heads.every((head, index) => head === this.docHeads[index])) {
+        return
+      }
+
+      this.docHeads = heads
 
       const ids = new Set(
         patches

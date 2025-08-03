@@ -21,6 +21,10 @@ import { channels } from './channels.js'
 
 const app = express(feathers())
 
+if (!process.env.AUTOMERGE_ROOT_DOCUMENT) {
+  throw new Error('AUTOMERGE_ROOT_DOCUMENT environment variable is required')
+}
+
 // Load app configuration
 app.configure(configuration())
 app.use(cors())
@@ -44,7 +48,7 @@ app.configure(services)
 app.configure(
   automergeServer({
     directory: '../../data/automerge',
-    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT || 'automerge:3po5JQXjBoEDj2Bszbk3nujsiDVo',
+    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT,
     serverId: 'test-server',
     syncServicePath: 'automerge',
     async initializeDocument(servicePath, query) {
