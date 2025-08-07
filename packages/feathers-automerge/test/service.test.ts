@@ -20,7 +20,13 @@ describe('@kalisio/feathers-automerge', () => {
   const repo = new Repo()
   const handle = repo.create<SyncServiceDocument>({
     __meta: {
-      peeps: { idField: 'id' }
+      peeps: {
+        idField: 'id',
+        paginate: {
+          default: 10,
+          max: 50
+        }
+      }
     },
     peeps: {}
   })
