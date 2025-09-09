@@ -16,6 +16,7 @@ import { automergeServer } from '@kalisio/feathers-automerge-server'
 import { logger } from './logger.js'
 import { logError } from './hooks/log-error.js'
 import { mongodb } from './mongodb.js'
+import { authentication } from './authentication.js'
 import { services } from './services/index.js'
 import { channels } from './channels.js'
 
@@ -43,7 +44,7 @@ app.configure(
   })
 )
 app.configure(mongodb)
-
+app.configure(authentication)
 app.configure(services)
 app.configure(
   automergeServer({
@@ -51,6 +52,9 @@ app.configure(
     rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT,
     serverId: 'test-server',
     syncServicePath: 'automerge',
+    authentication: {
+      path: 'authentication'
+    },
     async initializeDocument(servicePath, query) {
       if (servicePath === 'todos') {
         const { username } = query
@@ -60,7 +64,7 @@ app.configure(
         })
       }
 
-      return []
+      return null
     },
     async getDocumentsForData(servicePath, data, documents) {
       if (servicePath === 'todos') {

@@ -23,7 +23,11 @@ export interface SyncServiceOptions {
   rootDocumentId: string
   serverId: string
   syncServicePath: string
-  initializeDocument(servicePath: string, query: Query, documents: SyncServiceInfo[]): Promise<unknown[]>
+  initializeDocument(
+    servicePath: string,
+    query: Query,
+    documents: SyncServiceInfo[]
+  ): Promise<unknown[] | null>
   getDocumentsForData(
     servicePath: string,
     data: unknown,
@@ -86,15 +90,9 @@ export class AutomergeSyncServive {
     }
 
     const services = Object.keys(this.app.services).filter((path) => path !== this.options.syncServicePath)
-    const data = services.reduce(
-      (res, path) => ({
-        ...res,
-        [path]: {}
-      }),
-      {
-        __meta: {}
-      } as SyncServiceDocument
-    )
+    const data = {
+      __meta: {}
+    } as SyncServiceDocument
 
     await Promise.all(
       services.map(async (servicePath) => {
@@ -104,21 +102,24 @@ export class AutomergeSyncServive {
         const service = this.app?.service(servicePath)
         const serviceOptions = feathers.getServiceOptions(service) as AdapterServiceOptions
         const serviceData = await this.options.initializeDocument(servicePath, query, docs)
-        const convertedData: unknown[] = JSON.parse(JSON.stringify(serviceData))
-        const idField = service?.id || 'id'
-        const paginate = serviceOptions?.paginate || { default: 10, max: 10 }
 
-        data.__meta[servicePath] = { idField, paginate }
-        data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
-          const id = (current as any)[idField] ?? generateObjectId()
-          return {
-            ...(res as Record<string, unknown>),
-            [id]: {
-              ...(current as Record<string, unknown>),
-              __source: this.options.serverId
+        if (serviceData !== null) {
+          const convertedData: unknown[] = JSON.parse(JSON.stringify(serviceData))
+          const idField = service?.id || 'id'
+          const paginate = serviceOptions?.paginate || { default: 10, max: 10 }
+
+          data.__meta[servicePath] = { idField, paginate }
+          data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
+            const id = (current as any)[idField] ?? generateObjectId()
+            return {
+              ...(res as Record<string, unknown>),
+              [id]: {
+                ...(current as Record<string, unknown>),
+                __source: this.options.serverId
+              }
             }
-          }
-        }, {})
+          }, {})
+        }
       })
     )
 
@@ -132,6 +133,7 @@ export class AutomergeSyncServive {
 
     this.docHandles[url] = doc
 
+    console.log(data)
     await new Promise<SyncServiceInfo>(async (resolve) => {
       this.rootDocument!.change((doc) => {
         doc.documents.push(info)

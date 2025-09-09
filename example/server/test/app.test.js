@@ -7,10 +7,8 @@ const port = app.get('port')
 const appUrl = `http://${app.get('host')}:${port}`
 
 describe('Feathers application tests', () => {
-  let server
-
   before(async () => {
-    server = await app.listen(port)
+    await app.listen(port)
   })
 
   after(async () => {

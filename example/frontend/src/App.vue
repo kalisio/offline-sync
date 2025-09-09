@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import Todo from './components/Todo.vue'
+import Login from './components/Login.vue'
 import { useOffline, stopOffline, getApp, getUsername } from './feathers'
 
 const isOffline = ref(false)
 const isToggling = ref(false)
+const user = ref<{ email: string; _id: string } | null>(null)
+const users = ref(['robin', 'luc', 'david', 'alice'])
 
-// Initialize offline state based on existing syncHandle
-getApp().then((app) => {
-  isOffline.value = app.get('syncHandle') !== null
-})
-
-const users = ['robin', 'luc', 'david', 'alice']
+function updateUser(authResult: any) {
+  user.value = authResult.user
+}
 
 async function toggleOffline() {
   isToggling.value = true
@@ -32,10 +32,23 @@ async function toggleOffline() {
     isToggling.value = false
   }
 }
+
+onMounted(async () => {
+  const app = await getApp()
+
+  isOffline.value = !!app.get('syncHandle')
+
+  try {
+    const authResult = await app.reAuthenticate()
+
+    console.log(authResult.accessToken)
+    user.value = authResult.user
+  } catch (error) {}
+})
 </script>
 
 <template>
-  <div class="app">
+  <div class="app" v-if="user">
     <h1>Feathers Offline-First Todo App</h1>
 
     <div class="offline-controls">
@@ -65,6 +78,9 @@ async function toggleOffline() {
     </div>
 
     <Todo />
+  </div>
+  <div class="app" v-else>
+    <Login @authenticated="updateUser" />
   </div>
 </template>
 

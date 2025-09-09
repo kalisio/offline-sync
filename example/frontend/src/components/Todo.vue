@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getApp, getUsername, type TodoItem } from '../feathers.js'
+import { getApp, getUsername, type Todo } from '../feathers.js'
 
 const newTodo = ref('')
-const todos = ref<TodoItem[]>([])
+const todos = ref<Todo[]>([])
 
 onMounted(async () => {
   const app = await getApp()
 
-  app.service('todos').on('created', (created: TodoItem) => {
+  app.service('todos').on('created', (created: Todo) => {
     if (created.username === getUsername()) {
       todos.value.push(created)
     }
   })
 
-  app.service('todos').on('patched', (patched: TodoItem) => {
+  app.service('todos').on('patched', (patched: Todo) => {
     const index = todos.value.findIndex((t) => t._id === patched._id)
     if (index !== -1) {
       todos.value[index] = patched
     }
   })
 
-  app.service('todos').on('removed', (removed: TodoItem) => {
+  app.service('todos').on('removed', (removed: Todo) => {
     todos.value = todos.value.filter((todo) => todo._id !== removed._id)
   })
 
@@ -46,9 +46,9 @@ const addTodo = async () => {
   }
 }
 
-const toggleTodo = async (todo: TodoItem) => {
+const toggleTodo = async (todo: Todo) => {
   const app = await getApp()
-  await app.service('todos').patch(todo._id, {
+  await app.service('todos').patch(todo._id!, {
     completed: !todo.completed
   })
 }
@@ -71,7 +71,7 @@ const removeTodo = async (id: string) => {
         <input type="checkbox" :checked="todo.completed" @change="toggleTodo(todo)" />
         <span class="todo-text">{{ todo.title }}</span>
         <span class="username" v-if="todo.username">by {{ todo.username }}</span>
-        <button class="delete-btn" @click="removeTodo(todo._id)">Delete</button>
+        <button class="delete-btn" @click="removeTodo(todo._id!)">Delete</button>
       </li>
     </ul>
   </div>
