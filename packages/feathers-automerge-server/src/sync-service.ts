@@ -146,6 +146,33 @@ export class AutomergeSyncServive {
     return info
   }
 
+  async remove(url: string) {
+    if (!this.rootDocument) {
+      throw new Error('Root document not available')
+    }
+
+    const docs = this.rootDocument.doc().documents
+    const index = docs.findIndex((d) => d.url === url)
+
+    if (index === -1) {
+      throw new NotFound(`Document with URL ${url} not found`)
+    }
+
+    const info = docs[index]
+
+    await new Promise<void>((resolve) => {
+      this.rootDocument!.change((doc) => {
+        doc.documents.splice(index, 1)
+        resolve()
+      })
+    })
+
+    this.repo.delete(url as AnyDocumentId)
+    delete this.docHandles[url]
+
+    return info
+  }
+
   async handleEvent(servicePath: string, eventName: string, data: any) {
     if (!this.app) {
       throw new Error('Feathers application not available. Did you call app.listen() or app.setup()?')

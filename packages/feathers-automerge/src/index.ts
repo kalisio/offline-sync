@@ -26,6 +26,14 @@ export type AutomergeAppConfig = {
   syncHandle: Promise<SyncDocumentHandle> | null
 }
 
+export type AutomergeClientConfig = {
+  syncOptions: AutomergeClientOptions
+  syncHandle: Promise<SyncDocumentHandle> | null
+  repo: Repo
+}
+
+export type AutomergeClientApp = Application<any, AutomergeClientConfig>
+
 export function createBrowserRepo(wsUrl: string) {
   return new Repo({
     network: [new BrowserWebSocketClientAdapter(wsUrl)],
@@ -33,8 +41,8 @@ export function createBrowserRepo(wsUrl: string) {
   })
 }
 
-export async function getDocHandle(app: Application, url: AutomergeUrl): Promise<SyncDocumentHandle> {
-  const repo: Repo = app.get('repo')
+export async function getDocHandle(app: AutomergeClientApp, url: AutomergeUrl): Promise<SyncDocumentHandle> {
+  const repo = app.get('repo')
 
   if (!repo) {
     throw new Error('Repo not initialized on application')
@@ -43,10 +51,10 @@ export async function getDocHandle(app: Application, url: AutomergeUrl): Promise
   return repo.find<SyncServiceDocument>(url)
 }
 
-export async function initAutomergeServices(app: Application, url: AutomergeUrl) {
+export async function initAutomergeServices(app: AutomergeClientApp, url: AutomergeUrl) {
   app.set('syncHandle', getDocHandle(app, url))
 
-  const handle: SyncDocumentHandle = await app.get('syncHandle')
+  const handle = await app.get('syncHandle')!
   const doc = await handle.doc()
 
   Object.keys(doc).forEach((path) => {
@@ -65,8 +73,8 @@ export async function initAutomergeServices(app: Application, url: AutomergeUrl)
   })
 }
 
-export async function syncOffline(app: Application, payload: SyncServiceCreate) {
-  const { syncServicePath } = app.get('syncOptions') as AutomergeClientOptions
+export async function syncOffline(app: AutomergeClientApp, payload: SyncServiceCreate) {
+  const { syncServicePath } = app.get('syncOptions')
   const info: SyncServiceInfo = await app.service(syncServicePath).create(payload)
 
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -78,8 +86,8 @@ export async function syncOffline(app: Application, payload: SyncServiceCreate) 
   return info
 }
 
-export async function stopSyncOffline(app: Application) {
-  const handle: SyncDocumentHandle = await app.get('syncHandle')
+export async function stopSyncOffline(app: AutomergeClientApp, remove = false) {
+  const handle = await app.get('syncHandle')
 
   if (!handle) {
     return
@@ -95,10 +103,15 @@ export async function stopSyncOffline(app: Application) {
     })
   )
 
+  app.get('repo').delete(handle.documentId)
   app.set('syncHandle', null)
 
   if (typeof window !== 'undefined' && window.localStorage) {
     window.localStorage.removeItem(LOCALSTORAGE_KEY)
+  }
+
+  if (remove) {
+    await app.service('automerge').remove(handle.documentId)
   }
 }
 
