@@ -212,4 +212,16 @@ describe('@kalisio/feathers-automerge-server', () => {
     await removedTodo
     await expect(() => app.service('todos').get(3)).rejects.toThrow()
   })
+
+  it('can delete a document', async () => {
+    const info = await app.service('automerge').create({
+      query: {
+        username: 'deleteme'
+      }
+    })
+
+    const deletedDocument = await app.service('automerge').remove(info.url)
+    expect(deletedDocument).toEqual(info)
+    await expect(() => app.service('automerge').get(info.url)).rejects.toThrow()
+  })
 })
