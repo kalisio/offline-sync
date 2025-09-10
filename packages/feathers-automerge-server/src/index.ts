@@ -59,14 +59,36 @@ export interface ServerOptions extends SyncServiceOptions {
   syncServerUrl?: string
   syncServerWsPath?: string
   directory: string
+  authentication?: {
+    path: string
+    jwtStrategy?: string
+  }
 }
 
 export function handleWss(wss: WebSocketServer, options: ServerOptions) {
-  return async (context: { server: HttpServer }, next: NextFunction) => {
-    context.server.on('upgrade', (request, socket, head) => {
-      const pathname = new URL(request.url!, `http://${request.headers.host}`).pathname
+  return async (context: { server: HttpServer; app: Application }, next: NextFunction) => {
+    context.server.on('upgrade', async (request, socket, head) => {
+      const url = new URL(request.url!, `http://${request.headers.host}`)
+      const pathname = url.pathname
+      const accessToken = url.searchParams.get('accessToken')
+      const { authentication } = options
 
       if (pathname === '/' + (options.syncServerWsPath || '')) {
+        if (authentication) {
+          const authService = context.app.service('authentication')
+
+          try {
+            await authService.create({
+              strategy: authentication.jwtStrategy || 'jwt',
+              accessToken
+            })
+          } catch (error: unknown) {
+            console.error(`Error authenticating Automerge websocket connection: ${(error as Error).message}`)
+            socket.destroy()
+            return
+          }
+        }
+
         wss.handleUpgrade(request, socket, head, (socket) => {
           debug('Handling sync-server websocket connection')
           wss.emit('connection', socket, request)

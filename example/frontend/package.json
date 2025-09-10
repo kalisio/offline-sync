@@ -13,6 +13,7 @@
     "lint:fix": "eslint src --ext .js,.ts,.vue --fix"
   },
   "dependencies": {
+    "@feathersjs/authentication-client": "^5.0.34",
     "@feathersjs/feathers": "^5.0.34",
     "@feathersjs/socketio-client": "^5.0.34",
     "@kalisio/feathers-automerge": "^0.1.0",

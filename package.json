@@ -11,7 +11,8 @@
     "test": "yarn compile && lerna run test",
     "dev": "./dev.sh",
     "lint": "lerna run lint",
-    "lint:fix": "lerna run lint:fix"
+    "lint:fix": "lerna run lint:fix",
+    "initialize": "node example/server/initialize.js"
   },
   "workspaces": [
     "packages/*",

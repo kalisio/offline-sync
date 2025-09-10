@@ -1,3 +1,5 @@
+import { authenticate } from '@feathersjs/authentication'
+
 import { TodosService, getOptions } from './todos.class.js'
 import { toObjectId } from '../../hooks/to-objectid.js'
 
@@ -18,7 +20,9 @@ export const todos = app => {
   // Initialize hooks
   app.service(todosPath).hooks({
     around: {
-      all: []
+      all: [
+        // authenticate('jwt')
+      ]
     },
     before: {
       all: [],

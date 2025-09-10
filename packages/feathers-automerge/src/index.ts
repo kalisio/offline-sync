@@ -4,7 +4,7 @@ import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import { AutomergeService, IdGenerator } from './service.js'
-import { SyncServiceCreate, SyncServiceDocument, SyncServiceInfo } from './utils.js'
+import { Query, SyncServiceCreate, SyncServiceDocument, SyncServiceInfo } from './utils.js'
 
 export * from './service.js'
 export * from './utils.js'
@@ -16,6 +16,7 @@ export type SyncDocumentHandle = DocHandle<SyncServiceDocument>
 export type AutomergeClientOptions = {
   syncServerUrl: string
   syncServicePath: string
+  authentication: boolean
   repo?: Repo
 }
 
@@ -115,27 +116,40 @@ export async function stopSyncOffline(app: AutomergeClientApp, remove = false) {
 }
 
 export function automergeClient(options: AutomergeClientOptions) {
-  return function (app: AutomergeClientApp) {
-    const repo = options.repo ?? createBrowserRepo(options.syncServerUrl)
+  const setupClient = async (app: Application, query: Query = {}) => {
+    const queryString = new URLSearchParams(query).toString()
+    const serverUrl = `${options.syncServerUrl}?${queryString}`
+    const repo = options.repo ?? createBrowserRepo(serverUrl)
 
-    app.set('syncOptions', options)
-    app.set('syncHandle', null)
     app.set('repo', repo)
 
-    app.hooks({
-      setup: [
-        async (_context: unknown, next: NextFunction) => {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            const url = window.localStorage.getItem(LOCALSTORAGE_KEY)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const url = window.localStorage.getItem(LOCALSTORAGE_KEY)
 
-            if (url) {
-              await initAutomergeServices(app, url as AutomergeUrl)
-            }
+      if (url) {
+        await initAutomergeServices(app, url as AutomergeUrl)
+      }
+    }
+  }
+
+  return function (app: Application) {
+    app.set('syncOptions', options)
+    app.set('syncHandle', null)
+
+    if (options.authentication) {
+      app.on('login', (authResult) => {
+        const { accessToken } = authResult
+        setupClient(app, { accessToken })
+      })
+    } else {
+      app.hooks({
+        setup: [
+          async (_context: unknown, next: NextFunction) => {
+            await setupClient(app)
+            await next()
           }
-
-          await next()
-        }
-      ]
-    })
+        ]
+      })
+    }
   }
 }
