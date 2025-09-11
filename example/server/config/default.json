@@ -2,9 +2,7 @@
   "host": "localhost",
   "port": 3030,
   "public": "./public/",
-  "origins": [
-    "http://localhost:3030"
-  ],
+  "origins": ["http://localhost:3030"],
   "paginate": {
     "default": 10,
     "max": 50
@@ -14,10 +12,7 @@
     "entity": "user",
     "service": "users",
     "secret": "hivQJAypBEmQTKABaaqgW9EMaDitdStL",
-    "authStrategies": [
-      "jwt",
-      "local"
-    ],
+    "authStrategies": ["jwt", "local"],
     "jwtOptions": {
       "header": {
         "typ": "access"
@@ -29,6 +24,14 @@
     "local": {
       "usernameField": "email",
       "passwordField": "password"
+    }
+  },
+  "automerge": {
+    "directory": "../../data/automerge",
+    "serverId": "test-server",
+    "syncServicePath": "automerge",
+    "authentication": {
+      "path": "authentication"
     }
   }
 }

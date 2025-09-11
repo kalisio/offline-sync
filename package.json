@@ -12,7 +12,7 @@
     "dev": "./dev.sh",
     "lint": "lerna run lint",
     "lint:fix": "lerna run lint:fix",
-    "initialize": "node example/server/initialize.js"
+    "init": "node example/server/initialize.js"
   },
   "workspaces": [
     "packages/*",
