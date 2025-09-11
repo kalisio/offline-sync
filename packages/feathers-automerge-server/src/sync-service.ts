@@ -114,8 +114,7 @@ export class AutomergeSyncServive {
             return {
               ...(res as Record<string, unknown>),
               [id]: {
-                ...(current as Record<string, unknown>),
-                __source: this.options.serverId
+                ...(current as Record<string, unknown>)
               }
             }
           }, {})
@@ -133,7 +132,6 @@ export class AutomergeSyncServive {
 
     this.docHandles[url] = doc
 
-    console.log(data)
     await new Promise<SyncServiceInfo>(async (resolve) => {
       this.rootDocument!.change((doc) => {
         doc.documents.push(info)
@@ -184,7 +182,7 @@ export class AutomergeSyncServive {
 
     debug(`Handling service event ${servicePath} ${eventName}`)
 
-    const { getDocumentsForData, serverId } = this.options
+    const { getDocumentsForData } = this.options
     const documents = this.rootDocument.doc().documents
     const service = this.app.service(servicePath)
     const syncDocuments = await getDocumentsForData(servicePath, data, documents)
@@ -202,10 +200,7 @@ export class AutomergeSyncServive {
 
             if (['updated', 'patched', 'created'].includes(eventName)) {
               debug(`Updating ${id} for ${servicePath}`)
-              doc[servicePath][id] = {
-                ...data,
-                __source: serverId
-              }
+              doc[servicePath][id] = { ...data }
             }
           }
           resolve()
@@ -248,25 +243,26 @@ export class AutomergeSyncServive {
 
           for (const id of ids) {
             try {
-              const { __source, ...data } = after[path][id] || before[path][id]
-              const isFromServer = __source === this.options.serverId
+              const data = after[path][id] || before[path][id]
 
               if (!before[path] || !before[path][id]) {
                 // Created
-                if (!isFromServer) {
-                  debug(`Service ${path} create ${id}`)
-                  await this.app.service(path).create(data)
-                }
+                debug(`Service ${path} create ${id}`)
+                await this.app.service(path).create(data, {
+                  provider: 'automerge'
+                })
               } else if (!after[path][id]) {
                 // Removed
                 debug(`Service ${path} remove ${id}`)
-                await this.app.service(path).remove(id)
+                await this.app.service(path).remove(id, {
+                  provider: 'automerge'
+                })
               } else if (before[path] && before[path][id]) {
                 // Patched
-                if (!isFromServer) {
-                  debug(`Service ${path} patch ${id}`)
-                  await this.app.service(path).patch(id, data)
-                }
+                debug(`Service ${path} patch ${id}`)
+                await this.app.service(path).patch(id, data, {
+                  provider: 'automerge'
+                })
               }
             } catch (error: unknown) {
               console.error(error)
@@ -293,9 +289,11 @@ export class AutomergeSyncServive {
         debug(`Listening to service ${servicePath} events ${options.serviceEvents}`)
 
         options.serviceEvents?.forEach((eventName) =>
-          service.on(eventName, async (data) => {
-            const converted = JSON.parse(JSON.stringify(data))
-            this.handleEvent(servicePath, eventName, converted)
+          service.on(eventName, async (data, context) => {
+            if (context.params.provider !== 'automerge') {
+              const converted = JSON.parse(JSON.stringify(data))
+              this.handleEvent(servicePath, eventName, converted)
+            }
           })
         )
       }

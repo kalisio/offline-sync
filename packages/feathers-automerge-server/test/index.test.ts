@@ -136,15 +136,13 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: todo1.id,
         title: 'Updated test todo',
         completed: true,
-        username: 'testuser',
-        __source: 'test-server'
+        username: 'testuser'
       },
       {
         id: latestTodo.id,
         title: 'New test todo',
         completed: false,
-        username: 'testuser',
-        __source: 'test-server'
+        username: 'testuser'
       }
     ])
 
@@ -157,8 +155,7 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: todo1.id,
         title: 'Updated test todo',
         completed: true,
-        username: 'testuser',
-        __source: 'test-server'
+        username: 'testuser'
       }
     ])
   })
