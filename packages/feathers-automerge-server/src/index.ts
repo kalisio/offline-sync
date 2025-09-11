@@ -56,9 +56,13 @@ export function createWss() {
 }
 
 export interface ServerOptions extends SyncServiceOptions {
-  syncServerUrl?: string
+  syncServer?: {
+    url: string
+    getAccessToken: (app: Application) => Promise<string>
+  }
   syncServerWsPath?: string
   directory: string
+  serverId: string
   authentication?: {
     path: string
     jwtStrategy?: string
@@ -106,7 +110,7 @@ export function automergeServer(options: ServerOptions) {
       throw new Error('automerge configuration must be set')
     }
 
-    const wss = options.syncServerUrl ? options.syncServerUrl : createWss()
+    const wss = options.syncServer ? options.syncServer.url : createWss()
     const repo = createRepo(options.directory, wss, options.serverId)
 
     debug('Initializing automerge service', options)

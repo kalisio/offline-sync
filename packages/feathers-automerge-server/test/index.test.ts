@@ -80,6 +80,8 @@ describe('@kalisio/feathers-automerge-server', () => {
 
   it('initialised the automerge service', () => {
     expect(app.service('automerge')).toBeDefined()
+    expect(todo1).toBeDefined()
+    expect(todo2).toBeDefined()
   })
 
   it('initialised the root document', async () => {
@@ -136,15 +138,13 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: todo1.id,
         title: 'Updated test todo',
         completed: true,
-        username: 'testuser',
-        __source: 'test-server'
+        username: 'testuser'
       },
       {
         id: latestTodo.id,
         title: 'New test todo',
         completed: false,
-        username: 'testuser',
-        __source: 'test-server'
+        username: 'testuser'
       }
     ])
 
@@ -157,8 +157,7 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: todo1.id,
         title: 'Updated test todo',
         completed: true,
-        username: 'testuser',
-        __source: 'test-server'
+        username: 'testuser'
       }
     ])
   })

@@ -1,0 +1,4 @@
+{
+  "port": 5050,
+  "syncServerUrl": "http://localhost:3030"
+}

@@ -48,13 +48,7 @@ app.configure(authentication)
 app.configure(services)
 app.configure(
   automergeServer({
-    directory: '../../data/automerge',
-    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT,
-    serverId: 'test-server',
-    syncServicePath: 'automerge',
-    authentication: {
-      path: 'authentication'
-    },
+    ...app.get('automerge'),
     async initializeDocument(servicePath, query) {
       if (servicePath === 'todos') {
         const { username } = query
