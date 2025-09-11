@@ -21,7 +21,6 @@ export type RootDocument = {
 
 export interface SyncServiceOptions {
   rootDocumentId: string
-  serverId: string
   syncServicePath: string
   initializeDocument(
     servicePath: string,

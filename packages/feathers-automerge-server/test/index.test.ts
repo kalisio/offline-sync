@@ -80,6 +80,8 @@ describe('@kalisio/feathers-automerge-server', () => {
 
   it('initialised the automerge service', () => {
     expect(app.service('automerge')).toBeDefined()
+    expect(todo1).toBeDefined()
+    expect(todo2).toBeDefined()
   })
 
   it('initialised the root document', async () => {

@@ -43,7 +43,9 @@ The following options are available:
 - `rootDocumentId`: The URL/ID of the root document that contains the list of all synchronized documents. See [initialization](#initialization) how to create it.
 - `serverId`: A unique identifier for this server instance (used to track data source).
 - `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
-- `syncServerUrl` (optional): URL of an external automerge sync server to connect to. If not provided, a local WebSocket server will be created.
+- `syncServer` (optional): Set this if connecting to an external sync server, e.g. for server to server synchronization  using the following options:
+  - `url`:URL of an external automerge sync server to connect to
+  - `getAccessToken(app) => Promise<string>`: A function that returns an access token for the sync server connection
 - `initializeDocument`: An async function that initializes document data for a given service path and query. Called when creating new documents.
   - Parameters: `servicePath` (string), `query` (Query object), `documents` (array of existing SyncServiceInfo)
   - Returns: Promise<unknown[]> - Array of initial data for the service
