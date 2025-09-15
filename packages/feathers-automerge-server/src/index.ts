@@ -10,6 +10,7 @@ import os from 'os'
 import type { Server as HttpServer } from 'http'
 import { AutomergeSyncServive, SyncServiceOptions } from './sync-service.js'
 import createDebug from 'debug'
+import { create } from 'lodash'
 
 const debug = createDebug('feathers-automerge-server')
 
@@ -56,13 +57,11 @@ export function createWss() {
 }
 
 export interface ServerOptions extends SyncServiceOptions {
-  syncServer?: {
-    url: string
-    getAccessToken: (app: Application) => Promise<string>
-  }
   syncServerWsPath?: string
+  syncServerUrl?: string
   directory: string
   serverId: string
+  getAccessToken?: () => Promise<string>
   authentication?: {
     path: string
     jwtStrategy?: string
@@ -104,13 +103,27 @@ export function handleWss(wss: WebSocketServer, options: ServerOptions) {
   }
 }
 
+export async function getWss(options: ServerOptions) {
+  if (options.syncServerUrl) {
+    if (options.getAccessToken) {
+      const accessToken = options.getAccessToken ? await options.getAccessToken() : undefined
+      const url = `${options.syncServerUrl}?access_token=${accessToken}`
+      return url
+    }
+
+    return options.syncServerUrl
+  }
+
+  return createWss()
+}
+
 export function automergeServer(options: ServerOptions) {
   return function (app: Application) {
     if (!options) {
       throw new Error('automerge configuration must be set')
     }
 
-    const wss = options.syncServer ? options.syncServer.url : createWss()
+    const wss = options.syncServerUrl ? options.syncServerUrl : createWss()
     const repo = createRepo(options.directory, wss, options.serverId)
 
     debug('Initializing automerge service', options)

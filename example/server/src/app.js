@@ -49,6 +49,21 @@ app.configure(services)
 app.configure(
   automergeServer({
     ...app.get('automerge'),
+    async getAccessToken() {
+      const response = await fetch('http://localhost:3030/authentication', {
+        body: JSON.stringify({
+          strategy: 'local',
+          email: 'david@feathers.dev',
+          password: 'test'
+        }),
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      const { accessToken } = await response.json()
+      return accessToken
+    },
     async initializeDocument(servicePath, query) {
       if (servicePath === 'todos') {
         const { username } = query

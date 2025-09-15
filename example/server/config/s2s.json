@@ -1,4 +1,7 @@
 {
   "port": 5050,
-  "syncServerUrl": "http://localhost:3030"
+  "mongodb": "mongodb://127.0.0.1:27018/server",
+  "automerge": {
+    "syncServerUrl": "http://localhost:3030"
+  }
 }

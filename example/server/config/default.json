@@ -29,9 +29,6 @@
   "automerge": {
     "directory": "../../data/automerge",
     "serverId": "test-server",
-    "syncServicePath": "automerge",
-    "authentication": {
-      "path": "authentication"
-    }
+    "syncServicePath": "automerge"
   }
 }
