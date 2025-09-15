@@ -25,6 +25,13 @@ export interface Paginated<T> {
 
 export type FindParams = Params<Record<string, any>>
 
+export const CHANGE_ID = '__change'
+
+export function omitChangeId<T>(obj: any): T {
+  const { [CHANGE_ID]: _, ...rest } = obj
+  return rest
+}
+
 export class AutomergeService<T, C = T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<SyncServiceDocument>
@@ -111,6 +118,7 @@ export class AutomergeService<T, C = T> {
     const item = JSON.parse(
       JSON.stringify({
         [this.idField]: id,
+        [CHANGE_ID]: generateUUID(),
         ...data
       })
     ) as T
@@ -119,7 +127,7 @@ export class AutomergeService<T, C = T> {
       doc[this.options.path][id] = item
     })
 
-    return item
+    return omitChangeId(item)
   }
 
   async patch(id: string, data: Partial<T>) {
@@ -133,9 +141,9 @@ export class AutomergeService<T, C = T> {
 
           item[prop] = data[prop]
         })
-        delete item.__source
+        item[CHANGE_ID] = generateUUID()
 
-        resolve(doc[path][id] as T)
+        resolve(omitChangeId(doc[path][id]) as T)
       })
     )
   }
@@ -153,7 +161,7 @@ export class AutomergeService<T, C = T> {
       delete doc[this.options.path][id]
     })
 
-    return removed
+    return omitChangeId(removed)
   }
 
   async setup() {
@@ -183,11 +191,11 @@ export class AutomergeService<T, C = T> {
 
       for (const id of ids) {
         if (!before[path] || !before[path][id]) {
-          emitter.emit('created', after[path][id])
+          emitter.emit('created', omitChangeId(after[path][id]))
         } else if (!after[path][id]) {
-          emitter.emit('removed', before[path][id])
+          emitter.emit('removed', omitChangeId(before[path][id]))
         } else if (before[path] && before[path][id]) {
-          emitter.emit('patched', after[path][id])
+          emitter.emit('patched', omitChangeId(after[path][id]))
         }
       }
     })
