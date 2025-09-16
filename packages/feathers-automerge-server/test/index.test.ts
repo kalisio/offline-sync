@@ -5,7 +5,8 @@ import { feathers } from '@feathersjs/feathers'
 import { MemoryService } from '@feathersjs/memory'
 import express, { Application } from '@feathersjs/express'
 import { AnyDocumentId } from '@automerge/automerge-repo'
-import { Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
+import { CHANGE_ID, generateUUID, Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
+import _ from 'lodash'
 
 import { automergeServer, createRootDocument } from '../src'
 import { AutomergeSyncServive } from '../src/sync-service'
@@ -17,7 +18,7 @@ type Todo = {
   username: string
 }
 
-type ServicesDocument = { todos: Record<string, Todo> }
+type ServicesDocument = { todos: Record<string, Todo & { [CHANGE_ID]: string }> }
 
 describe('@kalisio/feathers-automerge-server', () => {
   // __dirname in es module
@@ -131,9 +132,16 @@ describe('@kalisio/feathers-automerge-server', () => {
       completed: true
     })
 
-    const updatedContents = newDocument.doc() as { todos: Record<string, Todo> }
+    const getTodos = () => {
+      const updatedContents = newDocument.doc() as { todos: Record<string, Todo> }
 
-    expect(Object.values(updatedContents.todos)).toEqual([
+      return Object.values(updatedContents.todos).map((todo) => {
+        expect(todo[CHANGE_ID]).toBeDefined()
+        return _.omit(todo, CHANGE_ID)
+      })
+    }
+
+    expect(getTodos()).toEqual([
       {
         id: todo1.id,
         title: 'Updated test todo',
@@ -150,9 +158,7 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     await app.service('todos').remove(latestTodo.id)
 
-    const latestContents = newDocument.doc()
-
-    expect(Object.values(latestContents.todos)).toEqual([
+    expect(getTodos()).toEqual([
       {
         id: todo1.id,
         title: 'Updated test todo',
@@ -189,7 +195,8 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: 3,
         title: 'Created in document',
         completed: false,
-        username: 'otheruser'
+        username: 'otheruser',
+        [CHANGE_ID]: generateUUID()
       }
     })
     expect(await createdTodo).toEqual(await app.service('todos').get(3))
@@ -199,7 +206,8 @@ describe('@kalisio/feathers-automerge-server', () => {
         id: 3,
         title: 'Updated in document',
         completed: true,
-        username: 'otheruser'
+        username: 'otheruser',
+        [CHANGE_ID]: generateUUID()
       }
     })
 
@@ -210,6 +218,56 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     await removedTodo
     await expect(() => app.service('todos').get(3)).rejects.toThrow()
+  })
+
+  it('syncs multiple documents either way, does not end up in loops', async () => {
+    const info = await app.service('automerge').create({
+      query: {
+        username: 'multiuser',
+        multi: 1
+      }
+    })
+
+    const info2 = await app.service('automerge').create({
+      query: {
+        username: 'multiuser',
+        multi: 2
+      }
+    })
+
+    const document1 = await app.service('automerge').repo.find<ServicesDocument>(info.url as AnyDocumentId)
+    const document2 = await app.service('automerge').repo.find<ServicesDocument>(info2.url as AnyDocumentId)
+    const createdTodo = new Promise<Todo>((resolve) =>
+      app.service('todos').once('created', (todo) => resolve(todo))
+    )
+    const newTodo = {
+      id: 3,
+      title: 'Created in document',
+      completed: false,
+      username: 'multiuser'
+    }
+
+    expect(info.url).not.toEqual(info2.url)
+
+    document1.change((doc) => {
+      doc.todos['3'] = {
+        ...newTodo,
+        [CHANGE_ID]: generateUUID()
+      }
+    })
+
+    expect(await createdTodo).toEqual(newTodo)
+    expect(document1.doc().todos).toEqual(document2.doc().todos)
+
+    await app.service('todos').patch(3, {
+      completed: true,
+      title: 'Update from server'
+    })
+
+    expect(document1.doc().todos[3].completed).toBe(true)
+    expect(document1.doc().todos[3].title).toEqual('Update from server')
+    expect(document2.doc().todos[3].completed).toBe(true)
+    expect(document2.doc().todos[3].title).toEqual('Update from server')
   })
 
   it('can delete a document', async () => {

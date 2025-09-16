@@ -27,11 +27,6 @@ export type FindParams = Params<Record<string, any>>
 
 export const CHANGE_ID = '__change'
 
-export function omitChangeId<T>(obj: any): T {
-  const { [CHANGE_ID]: _, ...rest } = obj
-  return rest
-}
-
 export class AutomergeService<T, C = T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<SyncServiceDocument>
@@ -64,7 +59,7 @@ export class AutomergeService<T, C = T> {
   async find(params: FindParams & { paginate: false }): Promise<T[]>
   async find(params: FindParams & { paginate?: true }): Promise<Paginated<T>>
   async find(params: FindParams & { paginate?: boolean }): Promise<T[] | Paginated<T>> {
-    const doc = await this.handle.doc()
+    const doc = this.handle.doc()
 
     if (!doc) {
       throw new Error('Document not loaded')
@@ -104,7 +99,7 @@ export class AutomergeService<T, C = T> {
   }
 
   async get(id: string) {
-    const doc = await this.handle.doc()
+    const doc = this.handle.doc()
 
     if (doc == null || !doc[this.options.path][id]) {
       throw new Error(`Item ${id} not found`)
@@ -121,17 +116,18 @@ export class AutomergeService<T, C = T> {
         [CHANGE_ID]: generateUUID(),
         ...data
       })
-    ) as T
+    )
 
     this.handle.change((doc) => {
       doc[this.options.path][id] = item
     })
 
-    return omitChangeId(item)
+    return item as T
   }
 
   async patch(id: string, data: Partial<T>) {
     const { path } = this.options
+
     return new Promise<T>((resolve) =>
       this.handle.change((doc) => {
         const item = doc[path][id] as any
@@ -143,13 +139,13 @@ export class AutomergeService<T, C = T> {
         })
         item[CHANGE_ID] = generateUUID()
 
-        resolve(omitChangeId(doc[path][id]) as T)
+        resolve(doc[path][id] as T)
       })
     )
   }
 
   async remove(id: string) {
-    const doc = await this.handle.doc()
+    const doc = this.handle.doc()
 
     if (doc == null || !doc[this.options.path][id]) {
       throw new Error(`Item ${id} not found`)
@@ -161,7 +157,7 @@ export class AutomergeService<T, C = T> {
       delete doc[this.options.path][id]
     })
 
-    return omitChangeId(removed)
+    return removed as T
   }
 
   async setup() {
@@ -191,11 +187,11 @@ export class AutomergeService<T, C = T> {
 
       for (const id of ids) {
         if (!before[path] || !before[path][id]) {
-          emitter.emit('created', omitChangeId(after[path][id]))
+          emitter.emit('created', after[path][id])
         } else if (!after[path][id]) {
-          emitter.emit('removed', omitChangeId(before[path][id]))
+          emitter.emit('removed', before[path][id])
         } else if (before[path] && before[path][id]) {
-          emitter.emit('patched', omitChangeId(after[path][id]))
+          emitter.emit('patched', after[path][id])
         }
       }
     })

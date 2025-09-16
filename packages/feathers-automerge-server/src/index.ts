@@ -10,7 +10,6 @@ import os from 'os'
 import type { Server as HttpServer } from 'http'
 import { AutomergeSyncServive, SyncServiceOptions } from './sync-service.js'
 import createDebug from 'debug'
-import { create } from 'lodash'
 
 const debug = createDebug('feathers-automerge-server')
 
