@@ -8,8 +8,8 @@ import { AnyDocumentId } from '@automerge/automerge-repo'
 import { CHANGE_ID, generateUUID, Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
 import _ from 'lodash'
 
-import { automergeServer, createRootDocument } from '../src'
-import { AutomergeSyncServive } from '../src/sync-service'
+import { automergeServer, createRootDocument } from '../src/index.js'
+import { AutomergeSyncServive } from '../src/sync-service.js'
 
 type Todo = {
   id: number

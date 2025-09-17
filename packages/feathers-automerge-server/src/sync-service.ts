@@ -199,12 +199,11 @@ export class AutomergeSyncServive {
           const id = data[idField]
           const changeId: string = _.get(doc, [servicePath, id, CHANGE_ID])
 
-          if (eventName === 'removed' && doc[servicePath][id]) {
-            debug(`Removing ${id} from ${servicePath}`)
-            delete doc[servicePath][id]
-          }
-
           if (doc[servicePath] && currentChangeId !== changeId) {
+            if (eventName === 'removed' && doc[servicePath][id]) {
+              debug(`Removing ${id} from ${servicePath}`)
+              delete doc[servicePath][id]
+            }
             if (['updated', 'patched', 'created'].includes(eventName)) {
               debug(`Updating ${id} for ${servicePath}`)
               doc[servicePath][id] = {

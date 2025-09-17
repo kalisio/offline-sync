@@ -8,7 +8,7 @@
   "scripts": {
     "compile": "lerna run compile",
     "install": "yarn run compile",
-    "test": "yarn compile && lerna run test",
+    "test": "yarn compile && lerna run test --scope server && vitest run --coverage",
     "dev": "./dev.sh",
     "lint": "lerna run lint",
     "lint:fix": "lerna run lint:fix",
@@ -23,5 +23,9 @@
   "license": "MIT",
   "devDependencies": {
     "lerna": "^8.2.3"
+  },
+  "dependencies": {
+    "@vitest/coverage-v8": "^3.2.4",
+    "vitest": "^3.2.4"
   }
 }
