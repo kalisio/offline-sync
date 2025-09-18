@@ -8,59 +8,33 @@ This repository contains an example for a Feathers API with full offline-first c
 
 Install all the dependencies in the monorepo with
 
-```
+```sh
 yarn install
 ```
 
-### Starting the application
+### Running the example
 
-When using Visual Studio Code, all the below commands will be started automatically.
-
-### Development script
-
-All commands can also be run at once with
-
-```
-yarn run dev
-```
-
-#### MongoDB
-
-Start the local MongoDB server with
-
-```
-docker compose up
-```
-
-#### server
-
-This is a standard Feathers 5 API with websockets enabled and a `todos` service as well as a `sync` service which stores information about the synced documents (e.g. Automerge document IDs, service path and channel).
-
-Run it with
-
-```
-cd example/server
-yarn run dev
-```
-
-You can also run a second server instance to test server to server synchronization by running the command with the following environment variables:
+First, run basic initialization:
 
 ```sh
-PORT=3031 MONGODB="mongodb://127.0.0.1:27018/server" AUTOMERGE_DIRECTORY="../../data/automerge2" SYNC_SERVER_URL="http://localhost:3030" AUTOMERGE_DOCUMENT="<server automerge document>" yarn run dev
+yarn run init
 ```
 
-#### frontend
-
-The frontend is a simple Todo app using VueJS and a Feathers client with websockets enabled and a `todos` service.
-
-Run it with:
+With Docker running, the development system can be started like this
 
 ```sh
-cd example/frontend
 yarn run dev
 ```
 
-Then go to [localhost:5173](http://localhost:5173).
+Then go to [http://localhost:5173](http://localhost:5173). The API server is running at [http://localhost:3030](http://localhost:3030).
+
+To run another server to test server to server synchronization in a new terminal run:
+
+```sh
+yarn run s2s
+```
+
+It will be available at [http://localhost:5050](http://localhost:5050).
 
 ## Goal
 
