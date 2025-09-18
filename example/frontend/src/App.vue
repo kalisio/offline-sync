@@ -36,13 +36,11 @@ async function toggleOffline() {
 onMounted(async () => {
   const app = await getApp()
 
-  isOffline.value = !!app.get('syncHandle')
-
   try {
     const authResult = await app.reAuthenticate()
 
-    console.log(authResult.accessToken)
     user.value = authResult.user
+    isOffline.value = !!app.get('syncHandle')
   } catch (error) {}
 })
 </script>

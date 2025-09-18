@@ -1,3 +1,4 @@
+import 'dotenv/config'
 // For more information about this file see https://dove.feathersjs.com/guides/cli/application.html
 import { feathers } from '@feathersjs/feathers'
 import express, {
@@ -63,6 +64,18 @@ app.configure(
       })
       const { accessToken } = await response.json()
       return accessToken
+    },
+    async authenticate(accessToken) {
+      if (!accessToken) {
+        return false
+      }
+
+      await app.service('authentication').create({
+        strategy: 'jwt',
+        accessToken
+      })
+
+      return true
     },
     async initializeDocument(servicePath, query) {
       if (servicePath === 'todos') {
