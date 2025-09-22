@@ -53,6 +53,7 @@ export function createApp(
 
   return app
 }
+
 describe('@kalisio/feathers-automerge-server', () => {
   // __dirname in es module
   const __dirname = fileURLToPath(new URL('.', import.meta.url))
@@ -299,7 +300,17 @@ describe('@kalisio/feathers-automerge-server', () => {
     await expect(() => app.service('automerge').get(info.url)).rejects.toThrow()
   })
 
-  it('server to server sync', async () => {
+  it.only('server to server sync', async () => {
+    const info = await app.service('automerge').create({
+      query: {
+        username: 'syncuser'
+      }
+    })
+    const existingTodo = await app.service('todos').create({
+      title: 'Todo to sync',
+      completed: false,
+      username: 'syncuser'
+    })
     const directory2 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test2')
     const app2 = createApp({
       directory: directory2,
@@ -310,11 +321,6 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     await app2.listen(8989)
 
-    const info = await app.service('automerge').create({
-      query: {
-        username: 'testuser'
-      }
-    })
     const documents = await app.service('automerge').find()
     const documents2 = await app2.service('automerge').find()
 
@@ -327,9 +333,18 @@ describe('@kalisio/feathers-automerge-server', () => {
     const syncTodo = await app.service('todos').create({
       title: 'Todo to sync',
       completed: false,
-      username: 'testuser'
+      username: 'syncuser'
     })
 
     expect(syncTodo).toEqual(await app2TodoCreated)
+
+    const app2Todos = await app2.service('todos').find({
+      paginate: false
+    })
+
+    expect(app2Todos).toEqual([existingTodo, syncTodo])
+
+    await app2.service('automerge').repo.flush()
+    await app.service('automerge').repo.flush()
   })
 })
