@@ -228,10 +228,71 @@ export class AutomergeSyncServive {
     this.processedChanges.add(currentChangeId)
   }
 
+  async syncExistingData(handle: DocHandle<unknown>) {
+    if (!this.app) {
+      debug('Feathers application not available for syncing existing data')
+      return
+    }
+
+    const doc = handle.doc() as any
+    if (!doc) {
+      debug('Document not available for syncing existing data')
+      return
+    }
+
+    debug(`Syncing existing data from document ${handle.url}`)
+
+    const meta = doc.__meta || {}
+
+    // Process each service's data in the document
+    for (const servicePath of Object.keys(doc)) {
+      if (servicePath === '__meta' || !this.app.service(servicePath)) {
+        continue
+      }
+
+      const serviceData = doc[servicePath]
+      if (!serviceData || typeof serviceData !== 'object') {
+        continue
+      }
+
+      const serviceMeta = meta[servicePath]
+      const idField = serviceMeta?.idField || 'id'
+
+      // Process each record in the service
+      for (const record of Object.values(serviceData)) {
+        const { [CHANGE_ID]: changeId, ...data } = record as any
+        const params = { automerge: { changeId, initialSync: true } } as Params
+        const service = this.app.service(servicePath)
+
+        // Get the actual ID from the record using the service's idField
+        const recordId = data[idField]
+
+        // Check if record already exists locally
+        try {
+          await service.get(recordId)
+        } catch (error) {
+          if (error instanceof NotFound) {
+            // Record doesn't exist, create it
+            debug(`Creating new record ${servicePath}:${recordId} during initial sync`)
+            await service.create(data, params)
+          } else {
+            throw error
+          }
+        }
+
+        // Mark this change as processed to avoid loops
+        this.processedChanges.add(changeId)
+      }
+    }
+  }
+
   async handleDocument({ url }: SyncServiceInfo) {
     const handle = await this.repo.find(url)
 
     this.docHandles[url] = handle
+
+    // Sync existing data from the document to local services
+    await this.syncExistingData(handle)
 
     handle.on('change', async ({ patches, patchInfo }) => {
       const { before, after } = patchInfo as any
