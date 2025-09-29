@@ -1,3 +1,4 @@
+import 'dotenv/config'
 // For more information about this file see https://dove.feathersjs.com/guides/cli/application.html
 import { feathers } from '@feathersjs/feathers'
 import express, {
@@ -48,12 +49,33 @@ app.configure(authentication)
 app.configure(services)
 app.configure(
   automergeServer({
-    directory: '../../data/automerge',
-    rootDocumentId: process.env.AUTOMERGE_ROOT_DOCUMENT,
-    serverId: 'test-server',
-    syncServicePath: 'automerge',
-    authentication: {
-      path: 'authentication'
+    ...app.get('automerge'),
+    async getAccessToken() {
+      const response = await fetch('http://localhost:3030/authentication', {
+        body: JSON.stringify({
+          strategy: 'local',
+          email: 'david@feathers.dev',
+          password: 'test'
+        }),
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      const { accessToken } = await response.json()
+      return accessToken
+    },
+    async authenticate(accessToken) {
+      if (!accessToken) {
+        return false
+      }
+
+      await app.service('authentication').create({
+        strategy: 'jwt',
+        accessToken
+      })
+
+      return true
     },
     async initializeDocument(servicePath, query) {
       if (servicePath === 'todos') {

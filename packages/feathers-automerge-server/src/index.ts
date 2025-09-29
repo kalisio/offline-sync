@@ -1,4 +1,4 @@
-import { PeerId, Repo } from '@automerge/automerge-repo'
+import { NetworkAdapterInterface, PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import {
   BrowserWebSocketClientAdapter,
@@ -13,29 +13,10 @@ import createDebug from 'debug'
 
 const debug = createDebug('feathers-automerge-server')
 
-export function createRepo(
-  dir: string,
-  wss?: WebSocketServer | string,
-  peerId: string = `storage-server-${os.hostname()}`
-) {
-  if (!wss) {
-    return new Repo({
-      storage: new NodeFSStorageAdapter(dir)
-    })
-  }
-
-  if (typeof wss === 'string') {
-    return new Repo({
-      network: [new BrowserWebSocketClientAdapter(wss)],
-      storage: new NodeFSStorageAdapter(dir)
-    })
-  }
-
+export function createRepo(dir: string, options: Omit<RepoConfig, 'storage'> = {}) {
   return new Repo({
-    network: [new NodeWSServerAdapter(wss as any)],
     storage: new NodeFSStorageAdapter(dir),
-    peerId: peerId as PeerId,
-    sharePolicy: async () => false
+    ...options
   })
 }
 
@@ -51,72 +32,92 @@ export async function createRootDocument(directory: string) {
   return doc
 }
 
-export function createWss() {
-  return new WebSocketServer({ noServer: true })
-}
-
-export interface ServerOptions extends SyncServiceOptions {
+export interface SyncServerOptions extends SyncServiceOptions {
+  directory: string
+  serverId: string
+  authenticate?: (accessToken: string | null) => Promise<boolean>
+  getAccessToken?: () => Promise<string>
   syncServerUrl?: string
   syncServerWsPath?: string
-  directory: string
-  authentication?: {
-    path: string
-    jwtStrategy?: string
-  }
 }
 
-export function handleWss(wss: WebSocketServer, options: ServerOptions) {
-  return async (context: { server: HttpServer; app: Application }, next: NextFunction) => {
+export type AppSetupHookContext = {
+  app: Application
+  server: HttpServer
+}
+
+export function handleWss(options: SyncServerOptions) {
+  return async (context: AppSetupHookContext, next: NextFunction) => {
+    const { syncServicePath, authenticate, syncServerWsPath = '' } = options
+    const wss = new WebSocketServer({ noServer: true })
+    const repo = createRepo(options.directory, {
+      peerId: options.serverId as PeerId,
+      network: [new NodeWSServerAdapter(wss as any)],
+      sharePolicy: async () => false
+    })
+
+    context.app.use(syncServicePath, new AutomergeSyncServive(repo, options))
     context.server.on('upgrade', async (request, socket, head) => {
       const url = new URL(request.url!, `http://${request.headers.host}`)
       const pathname = url.pathname
       const accessToken = url.searchParams.get('accessToken')
-      const { authentication } = options
 
-      if (pathname === '/' + (options.syncServerWsPath || '')) {
-        if (authentication) {
-          const authService = context.app.service('authentication')
-
-          try {
-            await authService.create({
-              strategy: authentication.jwtStrategy || 'jwt',
-              accessToken
-            })
-          } catch (error: unknown) {
-            console.error(`Error authenticating Automerge websocket connection: ${(error as Error).message}`)
+      if (pathname === `/${syncServerWsPath}`) {
+        try {
+          if (authenticate && !(await authenticate(accessToken))) {
+            debug('Socket authentication failed')
             socket.destroy()
             return
           }
-        }
 
-        wss.handleUpgrade(request, socket, head, (socket) => {
-          debug('Handling sync-server websocket connection')
-          wss.emit('connection', socket, request)
-        })
+          wss.handleUpgrade(request, socket, head, (socket: unknown) => {
+            debug('Handling sync-server websocket connection')
+            wss.emit('connection', socket, request)
+          })
+        } catch (error: unknown) {
+          console.error('Error handling websocket connection:', error)
+          socket.destroy()
+        }
       }
     })
 
-    return next()
+    await next()
   }
 }
 
-export function automergeServer(options: ServerOptions) {
+export function handleWsClient(options: SyncServerOptions) {
+  return async (context: AppSetupHookContext, next: NextFunction) => {
+    const { getAccessToken, syncServerUrl, directory, serverId } = options
+    const accessToken = typeof getAccessToken === 'function' ? await getAccessToken() : ''
+    const url = `${syncServerUrl}?accessToken=${accessToken}`
+    const repo = createRepo(directory, {
+      peerId: serverId as PeerId,
+      network: [new BrowserWebSocketClientAdapter(url)]
+    })
+
+    context.app.use(options.syncServicePath, new AutomergeSyncServive(repo, options))
+
+    debug(
+      `Connecting to remote sync server ${syncServerUrl} ${accessToken ? 'with access token' : 'without access token'}`
+    )
+
+    await next()
+  }
+}
+
+export function automergeServer(options: SyncServerOptions) {
   return function (app: Application) {
     if (!options) {
       throw new Error('automerge configuration must be set')
     }
 
-    const wss = options.syncServerUrl ? options.syncServerUrl : createWss()
-    const repo = createRepo(options.directory, wss, options.serverId)
+    const syncServerSetup =
+      typeof options.syncServerUrl === 'string' ? handleWsClient(options) : handleWss(options)
 
     debug('Initializing automerge service', options)
 
-    if (wss instanceof WebSocketServer) {
-      app.hooks({
-        setup: [handleWss(wss, options)]
-      })
-    }
-
-    app.use(options.syncServicePath, new AutomergeSyncServive(repo, options))
+    app.hooks({
+      setup: [syncServerSetup]
+    })
   }
 }

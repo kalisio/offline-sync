@@ -1,5 +1,5 @@
 import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
-import { type Application } from '@feathersjs/feathers'
+import { HookContext, Params, type Application } from '@feathersjs/feathers'
 import { NotFound } from '@feathersjs/errors'
 import feathers from '@feathersjs/feathers'
 import { AdapterServiceOptions } from '@feathersjs/adapter-commons'
@@ -10,7 +10,9 @@ import {
   SyncServiceInfo,
   SyncServiceDocument,
   Query,
-  generateObjectId
+  generateObjectId,
+  generateUUID,
+  CHANGE_ID
 } from '@kalisio/feathers-automerge'
 
 const debug = createDebug('feathers-automerge-server/sync-service')
@@ -21,7 +23,6 @@ export type RootDocument = {
 
 export interface SyncServiceOptions {
   rootDocumentId: string
-  serverId: string
   syncServicePath: string
   initializeDocument(
     servicePath: string,
@@ -38,21 +39,20 @@ export interface SyncServiceOptions {
 export class AutomergeSyncServive {
   app?: Application
   rootDocument?: DocHandle<RootDocument>
-  docHandles: Record<string, DocHandle<unknown>>
+  docHandles: Record<string, DocHandle<unknown>> = {}
+  processedChanges = new Set<string>()
 
   constructor(
     public repo: Repo,
     public options: SyncServiceOptions
-  ) {
-    this.docHandles = {}
-  }
+  ) {}
 
   async find() {
     if (!this.rootDocument) {
       throw new Error('Root document not available. Did you call app.listen() or app.setup()?')
     }
 
-    const doc = await this.rootDocument.doc()
+    const doc = this.rootDocument.doc()
 
     if (!doc) {
       throw new Error('Root document not available')
@@ -90,9 +90,10 @@ export class AutomergeSyncServive {
     }
 
     const services = Object.keys(this.app.services).filter((path) => path !== this.options.syncServicePath)
-    const data = {
+    const data: SyncServiceDocument = {
       __meta: {}
-    } as SyncServiceDocument
+    }
+    const changeId = generateUUID()
 
     await Promise.all(
       services.map(async (servicePath) => {
@@ -109,16 +110,19 @@ export class AutomergeSyncServive {
           const paginate = serviceOptions?.paginate || { default: 10, max: 10 }
 
           data.__meta[servicePath] = { idField, paginate }
-          data[servicePath] = convertedData.reduce<Record<string, unknown>>((res, current) => {
-            const id = (current as any)[idField] ?? generateObjectId()
-            return {
-              ...(res as Record<string, unknown>),
-              [id]: {
-                ...(current as Record<string, unknown>),
-                __source: this.options.serverId
+          data[servicePath] = convertedData.reduce<Record<string, unknown>>(
+            (res, current) => {
+              const id = (current as any)[idField] ?? generateObjectId()
+              return {
+                ...res,
+                [id]: {
+                  ...(current as Record<string, unknown>),
+                  [CHANGE_ID]: changeId
+                }
               }
-            }
-          }, {})
+            },
+            {} as Record<string, unknown>
+          )
         }
       })
     )
@@ -133,7 +137,6 @@ export class AutomergeSyncServive {
 
     this.docHandles[url] = doc
 
-    console.log(data)
     await new Promise<SyncServiceInfo>(async (resolve) => {
       this.rootDocument!.change((doc) => {
         doc.documents.push(info)
@@ -173,7 +176,7 @@ export class AutomergeSyncServive {
     return info
   }
 
-  async handleEvent(servicePath: string, eventName: string, data: any) {
+  async handleEvent(servicePath: string, eventName: string, data: any, context: HookContext) {
     if (!this.app) {
       throw new Error('Feathers application not available. Did you call app.listen() or app.setup()?')
     }
@@ -184,33 +187,36 @@ export class AutomergeSyncServive {
 
     debug(`Handling service event ${servicePath} ${eventName}`)
 
-    const { getDocumentsForData, serverId } = this.options
+    const { getDocumentsForData } = this.options
     const documents = this.rootDocument.doc().documents
     const service = this.app.service(servicePath)
     const syncDocuments = await getDocumentsForData(servicePath, data, documents)
     const idField = service.id || 'id'
-    const updateDocument = async (handle: DocHandle<unknown>) =>
-      new Promise<void>((resolve) => {
+    const currentChangeId = context.params.automerge?.changeId || generateUUID()
+    const updateDocument = async (handle: DocHandle<unknown>) => {
+      return new Promise<void>((resolve) => {
         handle.change((doc: any) => {
           const id = data[idField]
+          const changeId: string = _.get(doc, [servicePath, id, CHANGE_ID])
 
-          if (doc[servicePath]) {
+          if (doc[servicePath] && currentChangeId !== changeId) {
             if (eventName === 'removed' && doc[servicePath][id]) {
               debug(`Removing ${id} from ${servicePath}`)
               delete doc[servicePath][id]
             }
-
             if (['updated', 'patched', 'created'].includes(eventName)) {
               debug(`Updating ${id} for ${servicePath}`)
               doc[servicePath][id] = {
                 ...data,
-                __source: serverId
+                [CHANGE_ID]: currentChangeId
               }
             }
           }
+
           resolve()
         })
       })
+    }
 
     await Promise.all(
       syncDocuments
@@ -218,12 +224,77 @@ export class AutomergeSyncServive {
         .filter(Boolean)
         .map(updateDocument)
     )
+
+    this.processedChanges.add(currentChangeId)
+  }
+
+  async syncExistingData(handle: DocHandle<unknown>) {
+    if (!this.app) {
+      debug('Feathers application not available for syncing existing data')
+      return
+    }
+
+    const doc = handle.doc() as any
+    if (!doc) {
+      debug('Document not available for syncing existing data')
+      return
+    }
+
+    debug(`Syncing existing data from document ${handle.url}`)
+
+    const meta = doc.__meta || {}
+
+    // Process each service's data in the document
+    for (const servicePath of Object.keys(doc)) {
+      if (servicePath === '__meta' || !this.app.service(servicePath)) {
+        continue
+      }
+
+      const serviceData = doc[servicePath]
+      if (!serviceData || typeof serviceData !== 'object') {
+        continue
+      }
+
+      const serviceMeta = meta[servicePath]
+      const idField = serviceMeta?.idField || 'id'
+
+      // Process each record in the service
+      for (const record of Object.values(serviceData)) {
+        const { [CHANGE_ID]: changeId, ...data } = record as any
+        const params = { automerge: { changeId, initialSync: true } } as Params
+        const service = this.app.service(servicePath)
+
+        // Get the actual ID from the record using the service's idField
+        const recordId = data[idField]
+
+        // Check if record already exists locally
+        try {
+          await service.get(recordId)
+        } catch (error: any) {
+          // NOTE: comment test since it fails even when error is really NotFound
+          // if (error instanceof NotFound) {
+          if (error?.code === 404) {
+            // Record doesn't exist, create it
+            debug(`Creating new record ${servicePath}:${recordId} during initial sync`)
+            await service.create(data, params)
+          } else {
+            throw error
+          }
+        }
+
+        // Mark this change as processed to avoid loops
+        this.processedChanges.add(changeId)
+      }
+    }
   }
 
   async handleDocument({ url }: SyncServiceInfo) {
     const handle = await this.repo.find(url)
 
     this.docHandles[url] = handle
+
+    // Sync existing data from the document to local services
+    await this.syncExistingData(handle)
 
     handle.on('change', async ({ patches, patchInfo }) => {
       const { before, after } = patchInfo as any
@@ -248,26 +319,29 @@ export class AutomergeSyncServive {
 
           for (const id of ids) {
             try {
-              const { __source, ...data } = after[path][id] || before[path][id]
-              const isFromServer = __source === this.options.serverId
+              const documentItem = after[path][id] || before[path][id]
+              const { [CHANGE_ID]: changeId, ...data } = documentItem
+              const params = { automerge: { changeId, patches, patchInfo } } as Params
 
-              if (!before[path] || !before[path][id]) {
-                // Created
-                if (!isFromServer) {
+              if (!before[path]?.[id]) {
+                if (!this.processedChanges.has(changeId)) {
+                  // Created
                   debug(`Service ${path} create ${id}`)
-                  await this.app.service(path).create(data)
+                  await this.app.service(path).create(data, params)
                 }
-              } else if (!after[path][id]) {
+              } else if (!after[path]?.[id]) {
                 // Removed
                 debug(`Service ${path} remove ${id}`)
-                await this.app.service(path).remove(id)
-              } else if (before[path] && before[path][id]) {
-                // Patched
-                if (!isFromServer) {
+                await this.app.service(path).remove(id, params)
+              } else if (before[path]?.[id]) {
+                if (!this.processedChanges.has(changeId)) {
+                  // Patched
                   debug(`Service ${path} patch ${id}`)
-                  await this.app.service(path).patch(id, data)
+                  await this.app.service(path).patch(id, data, params)
                 }
               }
+
+              this.processedChanges.add(changeId)
             } catch (error: unknown) {
               console.error(error)
             }
@@ -293,9 +367,9 @@ export class AutomergeSyncServive {
         debug(`Listening to service ${servicePath} events ${options.serviceEvents}`)
 
         options.serviceEvents?.forEach((eventName) =>
-          service.on(eventName, async (data) => {
-            const converted = JSON.parse(JSON.stringify(data))
-            this.handleEvent(servicePath, eventName, converted)
+          service.on(eventName, async (payload, context) => {
+            const data = JSON.parse(JSON.stringify(payload))
+            this.handleEvent(servicePath, eventName, data, context)
           })
         )
       }

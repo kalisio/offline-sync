@@ -10,7 +10,10 @@ class DummySyncService {
   async create(data: SyncServiceCreate) {
     const handle = this.repo.create<SyncServiceDocument>({
       __meta: {
-        people: { idField: 'id' }
+        people: {
+          idField: 'id',
+          paginate: false
+        }
       },
       people: {}
     })
@@ -30,6 +33,7 @@ describe('@kailisio/feathers-automerge', () => {
     automergeClient({
       syncServerUrl: 'http://localhost:3000',
       syncServicePath: 'automerge',
+      authentication: false,
       repo
     })
   )
