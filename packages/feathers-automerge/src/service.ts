@@ -2,7 +2,7 @@ import type { DocHandle, UrlHeads } from '@automerge/automerge-repo'
 import type { EventEmitter } from 'node:events'
 import sift from 'sift'
 import { sorter, getLimit } from '@feathersjs/adapter-commons'
-import { Params, PaginationParams } from '@feathersjs/feathers'
+import { Params, PaginationParams, Id } from '@feathersjs/feathers'
 import { generateObjectId, generateUUID, SyncServiceDocument } from './utils.js'
 
 export type IdGenerator = () => string
@@ -98,7 +98,7 @@ export class AutomergeService<T, C = T> {
     return values
   }
 
-  async get(id: string) {
+  async get(id: Id) {
     const doc = this.handle.doc()
 
     if (doc == null || !doc[this.options.path][id]) {
@@ -125,7 +125,7 @@ export class AutomergeService<T, C = T> {
     return item as T
   }
 
-  async patch(id: string, data: Partial<T>) {
+  async patch(id: Id, data: Partial<T>) {
     const { path } = this.options
 
     return new Promise<T>((resolve) =>
@@ -144,7 +144,7 @@ export class AutomergeService<T, C = T> {
     )
   }
 
-  async remove(id: string) {
+  async remove(id: Id) {
     const doc = this.handle.doc()
 
     if (doc == null || !doc[this.options.path][id]) {

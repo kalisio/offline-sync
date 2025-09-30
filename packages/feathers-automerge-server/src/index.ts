@@ -35,10 +35,46 @@ export async function createRootDocument(directory: string) {
 export interface SyncServerOptions extends SyncServiceOptions {
   directory: string
   serverId: string
-  authenticate?: (accessToken: string | null) => Promise<boolean>
+  authenticate: (accessToken: string | null) => Promise<boolean>
   getAccessToken?: () => Promise<string>
   syncServerUrl?: string
   syncServerWsPath?: string
+}
+
+export function validateSyncServerOptions(options: any): options is SyncServerOptions {
+  if (!options || typeof options !== 'object') {
+    throw new Error('SyncServerOptions must be an object')
+  }
+
+  if (typeof options.directory !== 'string' || options.directory.trim() === '') {
+    throw new Error('SyncServerOptions.directory must be a non-empty string')
+  }
+
+  if (typeof options.serverId !== 'string' || options.serverId.trim() === '') {
+    throw new Error('SyncServerOptions.serverId must be a non-empty string')
+  }
+
+  if (typeof options.rootDocumentId !== 'string' || options.rootDocumentId.trim() === '') {
+    throw new Error('SyncServerOptions.rootDocumentId must be a non-empty string')
+  }
+
+  if (typeof options.syncServicePath !== 'string' || options.syncServicePath.trim() === '') {
+    throw new Error('SyncServerOptions.syncServicePath must be a non-empty string')
+  }
+
+  if (typeof options.authenticate !== 'function') {
+    throw new Error('SyncServerOptions.authenticate must be a function')
+  }
+
+  if (typeof options.initializeDocument !== 'function') {
+    throw new Error('SyncServerOptions.initializeDocument must be a function')
+  }
+
+  if (typeof options.getDocumentsForData !== 'function') {
+    throw new Error('SyncServerOptions.getDocumentsForData must be a function')
+  }
+
+  return true
 }
 
 export type AppSetupHookContext = {
@@ -64,7 +100,8 @@ export function handleWss(options: SyncServerOptions) {
 
       if (pathname === `/${syncServerWsPath}`) {
         try {
-          if (authenticate && !(await authenticate(accessToken))) {
+          const authCheck = await authenticate(accessToken)
+          if (!authCheck) {
             debug('Socket authentication failed')
             socket.destroy()
             return
@@ -107,9 +144,7 @@ export function handleWsClient(options: SyncServerOptions) {
 
 export function automergeServer(options: SyncServerOptions) {
   return function (app: Application) {
-    if (!options) {
-      throw new Error('automerge configuration must be set')
-    }
+    validateSyncServerOptions(options)
 
     const syncServerSetup =
       typeof options.syncServerUrl === 'string' ? handleWsClient(options) : handleWss(options)

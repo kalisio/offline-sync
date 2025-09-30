@@ -70,7 +70,7 @@ The following options are available:
 - `serverId: string`: A unique identifier for this server instance (used to track data source).
 - `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
 - `syncServerWsPath?: string`: The websocket path for the local sync server
-- `authenticate?: (accessToken: string | null) => Promise<boolean>`: Authenticate an access token that was passed to the connection of the local sync server.
+- `authenticate: (accessToken: string | null) => Promise<boolean>`: Authenticate an access token that was passed to the connection of the local sync server.
 - `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
 - `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
 - `initializeDocument`: An async function that initializes document data for a given service path and query. Called when creating new documents.
