@@ -78,5 +78,28 @@ describe('@kalisio/feathers-automerge', () => {
     })
 
     assert.equal(matchedPeople.total, 1)
+
+    const patchedEvent = new Promise<Person>((resolve) =>
+      app.service('people').once('patched', (person) => {
+        resolve(person)
+      })
+    )
+
+    await app.service('people').patch(person.id, {
+      age: 31
+    })
+
+    assert.equal((await patchedEvent).age, 31)
+    assert.equal((await app.service('people').get(person.id)).age, 31)
+
+    const removedEvent = new Promise<Person>((resolve) =>
+      app.service('people').once('removed', (person) => {
+        resolve(person)
+      })
+    )
+
+    await app.service('people').remove(person.id)
+
+    assert.ok(await removedEvent)
   })
 })

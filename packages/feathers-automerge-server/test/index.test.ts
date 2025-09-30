@@ -8,7 +8,12 @@ import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
 import { CHANGE_ID, generateUUID, Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
 import _ from 'lodash'
 
-import { automergeServer, createRootDocument, SyncServerOptions } from '../src/index.js'
+import {
+  automergeServer,
+  createRootDocument,
+  SyncServerOptions,
+  validateSyncServerOptions
+} from '../src/index.js'
 import { AutomergeSyncServive, RootDocument } from '../src/sync-service.js'
 
 type Todo = {
@@ -73,7 +78,10 @@ describe('@kalisio/feathers-automerge-server', () => {
     app = createApp({
       directory,
       serverId: 'test-server',
-      rootDocumentId: rootDoc.url
+      rootDocumentId: rootDoc.url,
+      async authenticate() {
+        return true
+      }
     })
 
     todo1 = await app.service('todos').create({
@@ -316,7 +324,10 @@ describe('@kalisio/feathers-automerge-server', () => {
       directory: directory2,
       rootDocumentId: rootDoc.url,
       serverId: 'test-server-2',
-      syncServerUrl: 'http://localhost:8787/'
+      syncServerUrl: 'http://localhost:8787/',
+      async authenticate() {
+        return true
+      }
     })
 
     await app2.listen(8989)
@@ -344,7 +355,40 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     expect(app2Todos.length).toBeGreaterThan(1)
 
-    await app2.service('automerge').repo.flush()
     await app.service('automerge').repo.flush()
+    await app.service('automerge').repo.flush()
+  })
+
+  describe('validateSyncServerOptions', () => {
+    const validOptions: SyncServerOptions = {
+      directory: '/path/to/directory',
+      serverId: 'test-server',
+      rootDocumentId: 'test-root-doc',
+      syncServicePath: 'automerge',
+      authenticate: async () => true,
+      initializeDocument: async () => [],
+      getDocumentsForData: async () => []
+    }
+
+    it('should pass with valid options', () => {
+      expect(() => validateSyncServerOptions(validOptions)).not.toThrow()
+      expect(validateSyncServerOptions(validOptions)).toBe(true)
+    })
+
+    it('should throw if options is null or undefined', () => {
+      expect(() => validateSyncServerOptions(null)).toThrow('SyncServerOptions must be an object')
+      expect(() => validateSyncServerOptions(undefined)).toThrow('SyncServerOptions must be an object')
+    })
+
+    it('should pass with all optional properties set', () => {
+      const fullOptions = {
+        ...validOptions,
+        getAccessToken: async () => 'token',
+        syncServerUrl: 'ws://localhost:3030',
+        syncServerWsPath: 'sync'
+      }
+      expect(() => validateSyncServerOptions(fullOptions)).not.toThrow()
+      expect(validateSyncServerOptions(fullOptions)).toBe(true)
+    })
   })
 })

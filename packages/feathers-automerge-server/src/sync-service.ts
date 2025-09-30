@@ -36,7 +36,7 @@ export interface SyncServiceOptions {
   ): Promise<SyncServiceInfo[]>
 }
 
-export class AutomergeSyncServive {
+export class AutomergeSyncService {
   app?: Application
   rootDocument?: DocHandle<RootDocument>
   docHandles: Record<string, DocHandle<unknown>> = {}
