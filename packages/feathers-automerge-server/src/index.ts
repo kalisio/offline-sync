@@ -8,7 +8,7 @@ import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs'
 import { WebSocketServer } from 'ws'
 import os from 'os'
 import type { Server as HttpServer } from 'http'
-import { AutomergeSyncServive, SyncServiceOptions } from './sync-service.js'
+import { AutomergeSyncService, SyncServiceOptions } from './sync-service.js'
 import createDebug from 'debug'
 
 const debug = createDebug('feathers-automerge-server')
@@ -66,6 +66,10 @@ export function validateSyncServerOptions(options: any): options is SyncServerOp
     throw new Error('SyncServerOptions.authenticate must be a function')
   }
 
+  // if (typeof options.getDocumentsForUser !== 'function') {
+  //   throw new Error('SyncServerOptions.getDocumentsForUser must be a function')
+  // }
+
   if (typeof options.initializeDocument !== 'function') {
     throw new Error('SyncServerOptions.initializeDocument must be a function')
   }
@@ -92,7 +96,7 @@ export function handleWss(options: SyncServerOptions) {
       sharePolicy: async () => false
     })
 
-    context.app.use(syncServicePath, new AutomergeSyncServive(repo, options))
+    context.app.use(syncServicePath, new AutomergeSyncService(repo, options))
     context.server.on('upgrade', async (request, socket, head) => {
       const url = new URL(request.url!, `http://${request.headers.host}`)
       const pathname = url.pathname
@@ -132,7 +136,7 @@ export function handleWsClient(options: SyncServerOptions) {
       network: [new BrowserWebSocketClientAdapter(url)]
     })
 
-    context.app.use(options.syncServicePath, new AutomergeSyncServive(repo, options))
+    context.app.use(options.syncServicePath, new AutomergeSyncService(repo, options))
 
     debug(
       `Connecting to remote sync server ${syncServerUrl} ${accessToken ? 'with access token' : 'without access token'}`
