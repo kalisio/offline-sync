@@ -294,7 +294,7 @@ export class AutomergeSyncServive {
     this.docHandles[url] = handle
 
     // Sync existing data from the document to local services
-    await this.syncExistingData(handle)
+    //await this.syncExistingData(handle)
 
     handle.on('change', async ({ patches, patchInfo }) => {
       const { before, after } = patchInfo as any
