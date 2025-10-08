@@ -10,6 +10,7 @@ import os from 'os'
 import type { Server as HttpServer } from 'http'
 import { AutomergeSyncService, SyncServiceOptions } from './sync-service.js'
 import createDebug from 'debug'
+import { Query } from '@kalisio/feathers-automerge'
 
 const debug = createDebug('feathers-automerge-server')
 
@@ -41,7 +42,7 @@ export interface SyncServerOptions extends SyncServiceOptions {
   syncServerWsPath?: string
 }
 
-export function validateSyncServerOptions(options: any): options is SyncServerOptions {
+export function validateSyncServerOptions(options: SyncServerOptions): options is SyncServerOptions {
   if (!options || typeof options !== 'object') {
     throw new Error('SyncServerOptions must be an object')
   }
@@ -64,6 +65,10 @@ export function validateSyncServerOptions(options: any): options is SyncServerOp
 
   if (typeof options.authenticate !== 'function') {
     throw new Error('SyncServerOptions.authenticate must be a function')
+  }
+
+  if (typeof options.canAccess !== 'function') {
+    throw new Error('SyncServerOptions.canAccess must be a function')
   }
 
   // if (typeof options.getDocumentsForUser !== 'function') {

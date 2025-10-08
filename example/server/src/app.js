@@ -94,6 +94,9 @@ app.configure(
       }
 
       return []
+    },
+    async canAccess() {
+      return true
     }
   })
 )

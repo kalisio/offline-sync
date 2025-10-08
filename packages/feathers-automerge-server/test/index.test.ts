@@ -25,9 +25,12 @@ type Todo = {
 
 type ServicesDocument = { todos: Record<string, Todo & { [CHANGE_ID]: string }> }
 
-export function createApp(
-  options: Omit<SyncServerOptions, 'initializeDocument' | 'getDocumentsForData' | 'syncServicePath'>
-) {
+type CreateAppOptions = Omit<
+  SyncServerOptions,
+  'initializeDocument' | 'getDocumentsForData' | 'syncServicePath' | 'canAccess'
+>
+
+export function createApp(options: CreateAppOptions) {
   const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncServive }>())
 
   app.use('todos', new MemoryService())
@@ -52,6 +55,9 @@ export function createApp(
         }
 
         return []
+      },
+      async canAccess(_query: Query, _user: unknown) {
+        return true
       }
     })
   )
@@ -367,7 +373,8 @@ describe('@kalisio/feathers-automerge-server', () => {
       syncServicePath: 'automerge',
       authenticate: async () => true,
       initializeDocument: async () => [],
-      getDocumentsForData: async () => []
+      getDocumentsForData: async () => [],
+      canAccess: async () => true
     }
 
     it('should pass with valid options', () => {
