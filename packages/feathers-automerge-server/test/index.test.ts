@@ -14,7 +14,7 @@ import {
   SyncServerOptions,
   validateSyncServerOptions
 } from '../src/index.js'
-import { AutomergeSyncServive, RootDocument } from '../src/sync-service.js'
+import { AutomergeSyncService, RootDocument } from '../src/sync-service.js'
 
 type Todo = {
   id: number
@@ -28,11 +28,10 @@ type ServicesDocument = { todos: Record<string, Todo & { [CHANGE_ID]: string }> 
 type CreateAppOptions = Omit<
   SyncServerOptions,
   'initializeDocument' | 'getDocumentsForData' | 'syncServicePath'
-> &
-  Partial<Pick<SyncServerOptions, 'canAccess'>>
+>
 
 export function createApp(options: CreateAppOptions) {
-  const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncServive }>())
+  const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncService }>())
 
   app.use('todos', new MemoryService())
   app.configure(
@@ -56,8 +55,7 @@ export function createApp(options: CreateAppOptions) {
         }
 
         return []
-      },
-      canAccess: options.canAccess || (async (_query: Query, _user: unknown) => true)
+      }
     })
   )
 
@@ -73,7 +71,7 @@ describe('@kalisio/feathers-automerge-server', () => {
   let todo2: Todo
   let app: Application<{
     todos: MemoryService<Todo>
-    automerge: AutomergeSyncServive
+    automerge: AutomergeSyncService
   }>
   let rootDoc: DocHandle<RootDocument>
 
@@ -85,6 +83,9 @@ describe('@kalisio/feathers-automerge-server', () => {
       serverId: 'test-server',
       rootDocumentId: rootDoc.url,
       async authenticate() {
+        return true
+      },
+      async canAccess() {
         return true
       }
     })
@@ -332,6 +333,9 @@ describe('@kalisio/feathers-automerge-server', () => {
       syncServerUrl: 'http://localhost:8787/',
       async authenticate() {
         return true
+      },
+      async canAccess() {
+        return true
       }
     })
 
@@ -560,8 +564,8 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
 
     it('should throw if options is null or undefined', () => {
-      expect(() => validateSyncServerOptions(null)).toThrow('SyncServerOptions must be an object')
-      expect(() => validateSyncServerOptions(undefined)).toThrow('SyncServerOptions must be an object')
+      expect(() => validateSyncServerOptions(null as any)).toThrow('SyncServerOptions must be an object')
+      expect(() => validateSyncServerOptions(undefined as any)).toThrow('SyncServerOptions must be an object')
     })
 
     it('should pass with all optional properties set', () => {

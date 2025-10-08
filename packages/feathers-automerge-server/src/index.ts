@@ -1,4 +1,4 @@
-import { NetworkAdapterInterface, PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
+import { PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import {
   BrowserWebSocketClientAdapter,
@@ -6,11 +6,9 @@ import {
 } from '@automerge/automerge-repo-network-websocket'
 import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs'
 import { WebSocketServer } from 'ws'
-import os from 'os'
 import type { Server as HttpServer } from 'http'
 import { AutomergeSyncService, SyncServiceOptions } from './sync-service.js'
 import createDebug from 'debug'
-import { Query } from '@kalisio/feathers-automerge'
 
 const debug = createDebug('feathers-automerge-server')
 
