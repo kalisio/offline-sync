@@ -34,8 +34,8 @@ export async function createRootDocument(directory: string) {
 export interface SyncServerOptions extends SyncServiceOptions {
   directory: string
   serverId: string
-  authenticate: (accessToken: string | null) => Promise<boolean>
-  getAccessToken?: () => Promise<string>
+  authenticate: (app: Application, accessToken: string | null) => Promise<boolean>
+  getAccessToken?: (app: Application) => Promise<string>
   syncServerUrl?: string
   syncServerWsPath?: string
 }
@@ -107,7 +107,7 @@ export function handleWss(options: SyncServerOptions) {
 
       if (pathname === `/${syncServerWsPath}`) {
         try {
-          const authCheck = await authenticate(accessToken)
+          const authCheck = await authenticate(context.app, accessToken)
           if (!authCheck) {
             debug('Socket authentication failed')
             socket.destroy()
@@ -132,7 +132,7 @@ export function handleWss(options: SyncServerOptions) {
 export function handleWsClient(options: SyncServerOptions) {
   return async (context: AppSetupHookContext, next: NextFunction) => {
     const { getAccessToken, syncServerUrl, directory, serverId } = options
-    const accessToken = typeof getAccessToken === 'function' ? await getAccessToken() : ''
+    const accessToken = typeof getAccessToken === 'function' ? await getAccessToken(context.app) : ''
     const url = `${syncServerUrl}?accessToken=${accessToken}`
     const repo = createRepo(directory, {
       peerId: serverId as PeerId,
