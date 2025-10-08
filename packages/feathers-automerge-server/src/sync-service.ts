@@ -77,7 +77,14 @@ export class AutomergeSyncService {
       throw new Error('Root document not available')
     }
 
-    return doc.documents.filter((document) => this.checkAccess(document.query, params, false))
+    const results = await Promise.all(
+      doc.documents.map(async (document) => ({
+        document,
+        allowed: await this.checkAccess(document.query, params, false)
+      }))
+    )
+
+    return results.filter((result) => result.allowed).map((result) => result.document)
   }
 
   async get(url: string, params: SyncServiceParams = {}) {
