@@ -369,8 +369,13 @@ describe('@kalisio/feathers-automerge-server', () => {
   })
 
   describe('canAccess option', () => {
-    it('blocks access to create when canAccess returns false', async () => {
-      const restrictedApp = createApp({
+    let restrictedApp: Application<{
+      todos: MemoryService<Todo>
+      automerge: AutomergeSyncService
+    }>
+
+    beforeAll(async () => {
+      restrictedApp = createApp({
         directory,
         serverId: 'restricted-server',
         rootDocumentId: rootDoc.url,
@@ -383,7 +388,9 @@ describe('@kalisio/feathers-automerge-server', () => {
       })
 
       await restrictedApp.listen(9090)
+    })
 
+    it('blocks access to create when canAccess returns false', async () => {
       await expect(() =>
         restrictedApp.service('automerge').create(
           {
@@ -395,20 +402,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
 
     it('allows access to create when canAccess returns true', async () => {
-      const restrictedApp = createApp({
-        directory,
-        serverId: 'restricted-server-2',
-        rootDocumentId: rootDoc.url,
-        async authenticate() {
-          return true
-        },
-        async canAccess(query, user) {
-          return (query as any).username === (user as any)?.username
-        }
-      })
-
-      await restrictedApp.listen(9091)
-
       const info = await restrictedApp.service('automerge').create(
         {
           query: { username: 'alloweduser' }
@@ -421,20 +414,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
 
     it('filters documents in find based on canAccess', async () => {
-      const restrictedApp = createApp({
-        directory,
-        serverId: 'restricted-server-3',
-        rootDocumentId: rootDoc.url,
-        async authenticate() {
-          return true
-        },
-        async canAccess(query, user) {
-          return (query as any).username === (user as any)?.username
-        }
-      })
-
-      await restrictedApp.listen(9092)
-
       // Create documents for different users
       await restrictedApp.service('automerge').create({
         query: { username: 'user1' }
@@ -463,20 +442,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
 
     it('blocks access to get when canAccess returns false', async () => {
-      const restrictedApp = createApp({
-        directory,
-        serverId: 'restricted-server-4',
-        rootDocumentId: rootDoc.url,
-        async authenticate() {
-          return true
-        },
-        async canAccess(query, user) {
-          return (query as any).username === (user as any)?.username
-        }
-      })
-
-      await restrictedApp.listen(9093)
-
       const info = await restrictedApp.service('automerge').create({
         query: { username: 'privateuser' }
       })
@@ -490,20 +455,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
 
     it('blocks access to remove when canAccess returns false', async () => {
-      const restrictedApp = createApp({
-        directory,
-        serverId: 'restricted-server-5',
-        rootDocumentId: rootDoc.url,
-        async authenticate() {
-          return true
-        },
-        async canAccess(query, user) {
-          return (query as any).username === (user as any)?.username
-        }
-      })
-
-      await restrictedApp.listen(9094)
-
       const info = await restrictedApp.service('automerge').create({
         query: { username: 'protecteduser' }
       })
@@ -517,20 +468,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
 
     it('bypasses canAccess check for internal calls without provider', async () => {
-      const restrictedApp = createApp({
-        directory,
-        serverId: 'restricted-server-6',
-        rootDocumentId: rootDoc.url,
-        async authenticate() {
-          return true
-        },
-        async canAccess() {
-          return false
-        }
-      })
-
-      await restrictedApp.listen(9095)
-
       // Internal calls (without provider) should work even if canAccess returns false
       const info = await restrictedApp.service('automerge').create({
         query: { username: 'internaluser' }
