@@ -58,6 +58,10 @@ app.configure(
       }
 
       return []
+    },
+    async canAccess(query, user) {
+      // Only allow access to documents where the query username matches the authenticated user
+      return query.username === user?.username
     }
   })
 )
@@ -73,6 +77,10 @@ The following options are available:
 - `authenticate: (accessToken: string | null) => Promise<boolean>`: Authenticate an access token that was passed to the connection of the local sync server.
 - `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
 - `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
+- `canAccess: <T = unknown>(query: Query, user: T) => Promise<boolean>`: An async function that controls access to documents based on the query and user. Called for all operations when a `provider` is present in params (external calls).
+  - Parameters: `query` (Query object - the document's query), `user` (the authenticated user from params)
+  - Returns: Promise<boolean> - true if access is allowed, false otherwise
+  - Note: This check is bypassed for internal calls (when no `provider` is present in params)
 - `initializeDocument`: An async function that initializes document data for a given service path and query. Called when creating new documents.
   - Parameters: `servicePath` (string), `query` (Query object), `documents` (array of existing SyncServiceInfo)
   - Returns: Promise<unknown[]> - Array of initial data for the service
