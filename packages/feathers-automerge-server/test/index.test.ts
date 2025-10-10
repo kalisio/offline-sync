@@ -8,8 +8,13 @@ import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
 import { CHANGE_ID, generateUUID, Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
 import _ from 'lodash'
 
-import { automergeServer, createRootDocument, SyncServerOptions } from '../src/index.js'
-import { AutomergeSyncServive, RootDocument } from '../src/sync-service.js'
+import {
+  automergeServer,
+  createRootDocument,
+  SyncServerOptions,
+  validateSyncServerOptions
+} from '../src/index.js'
+import { AutomergeSyncService, RootDocument } from '../src/sync-service.js'
 
 type Todo = {
   id: number
@@ -20,10 +25,13 @@ type Todo = {
 
 type ServicesDocument = { todos: Record<string, Todo & { [CHANGE_ID]: string }> }
 
-export function createApp(
-  options: Omit<SyncServerOptions, 'initializeDocument' | 'getDocumentsForData' | 'syncServicePath'>
-) {
-  const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncServive }>())
+type CreateAppOptions = Omit<
+  SyncServerOptions,
+  'initializeDocument' | 'getDocumentsForData' | 'syncServicePath'
+>
+
+export function createApp(options: CreateAppOptions) {
+  const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncService }>())
 
   app.use('todos', new MemoryService())
   app.configure(
@@ -63,7 +71,7 @@ describe('@kalisio/feathers-automerge-server', () => {
   let todo2: Todo
   let app: Application<{
     todos: MemoryService<Todo>
-    automerge: AutomergeSyncServive
+    automerge: AutomergeSyncService
   }>
   let rootDoc: DocHandle<RootDocument>
 
@@ -73,7 +81,13 @@ describe('@kalisio/feathers-automerge-server', () => {
     app = createApp({
       directory,
       serverId: 'test-server',
-      rootDocumentId: rootDoc.url
+      rootDocumentId: rootDoc.url,
+      async authenticate() {
+        return true
+      },
+      async canAccess() {
+        return true
+      }
     })
 
     todo1 = await app.service('todos').create({
@@ -316,7 +330,13 @@ describe('@kalisio/feathers-automerge-server', () => {
       directory: directory2,
       rootDocumentId: rootDoc.url,
       serverId: 'test-server-2',
-      syncServerUrl: 'http://localhost:8787/'
+      syncServerUrl: 'http://localhost:8787/',
+      async authenticate() {
+        return true
+      },
+      async canAccess() {
+        return true
+      }
     })
 
     await app2.listen(8989)
@@ -344,7 +364,156 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     expect(app2Todos.length).toBeGreaterThan(1)
 
-    await app2.service('automerge').repo.flush()
     await app.service('automerge').repo.flush()
+    await app.service('automerge').repo.flush()
+  })
+
+  describe('canAccess option', () => {
+    let restrictedApp: Application<{
+      todos: MemoryService<Todo>
+      automerge: AutomergeSyncService
+    }>
+
+    beforeAll(async () => {
+      restrictedApp = createApp({
+        directory,
+        serverId: 'restricted-server',
+        rootDocumentId: rootDoc.url,
+        async authenticate() {
+          return true
+        },
+        async canAccess(query, user) {
+          return (query as any).username === (user as any)?.username
+        }
+      })
+
+      await restrictedApp.listen(9090)
+    })
+
+    it('blocks access to create when canAccess returns false', async () => {
+      await expect(() =>
+        restrictedApp.service('automerge').create(
+          {
+            query: { username: 'restricted' }
+          },
+          { provider: 'rest', user: { username: 'otheruser' } }
+        )
+      ).rejects.toThrow('Access not allowed for this user')
+    })
+
+    it('allows access to create when canAccess returns true', async () => {
+      const info = await restrictedApp.service('automerge').create(
+        {
+          query: { username: 'alloweduser' }
+        },
+        { provider: 'rest', user: { username: 'alloweduser' } }
+      )
+
+      expect(info.url).toBeDefined()
+      expect(info.query).toEqual({ username: 'alloweduser' })
+    })
+
+    it('filters documents in find based on canAccess', async () => {
+      // Create documents for different users
+      await restrictedApp.service('automerge').create({
+        query: { username: 'user1' }
+      })
+      await restrictedApp.service('automerge').create({
+        query: { username: 'user2' }
+      })
+
+      // User1 should only see their document
+      const user1Docs = await restrictedApp.service('automerge').find({
+        provider: 'rest',
+        user: { username: 'user1' }
+      })
+
+      expect(user1Docs.length).toBe(1)
+      expect(user1Docs[0].query).toEqual({ username: 'user1' })
+
+      // User2 should only see their document
+      const user2Docs = await restrictedApp.service('automerge').find({
+        provider: 'rest',
+        user: { username: 'user2' }
+      })
+
+      expect(user2Docs.length).toBe(1)
+      expect(user2Docs[0].query).toEqual({ username: 'user2' })
+    })
+
+    it('blocks access to get when canAccess returns false', async () => {
+      const info = await restrictedApp.service('automerge').create({
+        query: { username: 'privateuser' }
+      })
+
+      await expect(() =>
+        restrictedApp.service('automerge').get(info.url, {
+          provider: 'rest',
+          user: { username: 'otheruser' }
+        })
+      ).rejects.toThrow(`Document ${info.url} not found`)
+    })
+
+    it('blocks access to remove when canAccess returns false', async () => {
+      const info = await restrictedApp.service('automerge').create({
+        query: { username: 'protecteduser' }
+      })
+
+      await expect(() =>
+        restrictedApp.service('automerge').remove(info.url, {
+          provider: 'rest',
+          user: { username: 'otheruser' }
+        })
+      ).rejects.toThrow('Access not allowed for this user')
+    })
+
+    it('bypasses canAccess check for internal calls without provider', async () => {
+      // Internal calls (without provider) should work even if canAccess returns false
+      const info = await restrictedApp.service('automerge').create({
+        query: { username: 'internaluser' }
+      })
+
+      expect(info.url).toBeDefined()
+
+      const found = await restrictedApp.service('automerge').find()
+      expect(found.some((doc) => doc.url === info.url)).toBe(true)
+
+      const removed = await restrictedApp.service('automerge').remove(info.url)
+      expect(removed.url).toBe(info.url)
+    })
+  })
+
+  describe('validateSyncServerOptions', () => {
+    const validOptions: SyncServerOptions = {
+      directory: '/path/to/directory',
+      serverId: 'test-server',
+      rootDocumentId: 'test-root-doc',
+      syncServicePath: 'automerge',
+      authenticate: async () => true,
+      initializeDocument: async () => [],
+      getDocumentsForData: async () => [],
+      canAccess: async () => true
+    }
+
+    it('should pass with valid options', () => {
+      expect(() => validateSyncServerOptions(validOptions)).not.toThrow()
+      expect(validateSyncServerOptions(validOptions)).toBe(true)
+    })
+
+    it('should throw if options is null or undefined', () => {
+      expect(() => validateSyncServerOptions(null as any)).toThrow('SyncServerOptions must be an object')
+      expect(() => validateSyncServerOptions(undefined as any)).toThrow('SyncServerOptions must be an object')
+    })
+
+    it('should pass with all optional properties set', () => {
+      const fullOptions = {
+        ...validOptions,
+        getAccessToken: async () => 'token',
+        syncServerUrl: 'ws://localhost:3030',
+        syncServerWsPath: 'sync'
+      }
+      expect(() => validateSyncServerOptions(fullOptions)).not.toThrow()
+      expect(validateSyncServerOptions(fullOptions)).toBe(true)
+    })
   })
 })

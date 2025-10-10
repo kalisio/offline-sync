@@ -1,4 +1,4 @@
-import { NetworkAdapterInterface, PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
+import { PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import {
   BrowserWebSocketClientAdapter,
@@ -6,9 +6,8 @@ import {
 } from '@automerge/automerge-repo-network-websocket'
 import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs'
 import { WebSocketServer } from 'ws'
-import os from 'os'
 import type { Server as HttpServer } from 'http'
-import { AutomergeSyncServive, SyncServiceOptions } from './sync-service.js'
+import { AutomergeSyncService, SyncServiceOptions } from './sync-service.js'
 import createDebug from 'debug'
 
 const debug = createDebug('feathers-automerge-server')
@@ -35,10 +34,54 @@ export async function createRootDocument(directory: string) {
 export interface SyncServerOptions extends SyncServiceOptions {
   directory: string
   serverId: string
-  authenticate?: (app: Application, accessToken: string | null) => Promise<boolean>
+  authenticate: (app: Application, accessToken: string | null) => Promise<boolean>
   getAccessToken?: (app: Application) => Promise<string>
   syncServerUrl?: string
   syncServerWsPath?: string
+}
+
+export function validateSyncServerOptions(options: SyncServerOptions): options is SyncServerOptions {
+  if (!options || typeof options !== 'object') {
+    throw new Error('SyncServerOptions must be an object')
+  }
+
+  if (typeof options.directory !== 'string' || options.directory.trim() === '') {
+    throw new Error('SyncServerOptions.directory must be a non-empty string')
+  }
+
+  if (typeof options.serverId !== 'string' || options.serverId.trim() === '') {
+    throw new Error('SyncServerOptions.serverId must be a non-empty string')
+  }
+
+  if (typeof options.rootDocumentId !== 'string' || options.rootDocumentId.trim() === '') {
+    throw new Error('SyncServerOptions.rootDocumentId must be a non-empty string')
+  }
+
+  if (typeof options.syncServicePath !== 'string' || options.syncServicePath.trim() === '') {
+    throw new Error('SyncServerOptions.syncServicePath must be a non-empty string')
+  }
+
+  if (typeof options.authenticate !== 'function') {
+    throw new Error('SyncServerOptions.authenticate must be a function')
+  }
+
+  if (typeof options.canAccess !== 'function') {
+    throw new Error('SyncServerOptions.canAccess must be a function')
+  }
+
+  // if (typeof options.getDocumentsForUser !== 'function') {
+  //   throw new Error('SyncServerOptions.getDocumentsForUser must be a function')
+  // }
+
+  if (typeof options.initializeDocument !== 'function') {
+    throw new Error('SyncServerOptions.initializeDocument must be a function')
+  }
+
+  if (typeof options.getDocumentsForData !== 'function') {
+    throw new Error('SyncServerOptions.getDocumentsForData must be a function')
+  }
+
+  return true
 }
 
 export type AppSetupHookContext = {
@@ -56,7 +99,7 @@ export function handleWss(options: SyncServerOptions) {
       sharePolicy: async () => false
     })
 
-    context.app.use(syncServicePath, new AutomergeSyncServive(repo, options))
+    context.app.use(syncServicePath, new AutomergeSyncService(repo, options))
     context.server.on('upgrade', async (request, socket, head) => {
       const url = new URL(request.url!, `http://${request.headers.host}`)
       const pathname = url.pathname
@@ -64,7 +107,8 @@ export function handleWss(options: SyncServerOptions) {
 
       if (pathname === `/${syncServerWsPath}`) {
         try {
-          if (authenticate && !(await authenticate(context.app, accessToken))) {
+          const authCheck = await authenticate(context.app, accessToken)
+          if (!authCheck) {
             debug('Socket authentication failed')
             socket.destroy()
             return
@@ -95,7 +139,7 @@ export function handleWsClient(options: SyncServerOptions) {
       network: [new BrowserWebSocketClientAdapter(url)]
     })
 
-    context.app.use(options.syncServicePath, new AutomergeSyncServive(repo, options))
+    context.app.use(options.syncServicePath, new AutomergeSyncService(repo, options))
 
     debug(
       `Connecting to remote sync server ${syncServerUrl} ${accessToken ? 'with access token' : 'without access token'}`
@@ -107,9 +151,7 @@ export function handleWsClient(options: SyncServerOptions) {
 
 export function automergeServer(options: SyncServerOptions) {
   return function (app: Application) {
-    if (!options) {
-      throw new Error('automerge configuration must be set')
-    }
+    validateSyncServerOptions(options)
 
     const syncServerSetup =
       typeof options.syncServerUrl === 'string' ? handleWsClient(options) : handleWss(options)

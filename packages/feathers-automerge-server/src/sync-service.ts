@@ -1,6 +1,6 @@
 import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
-import { HookContext, Params, type Application } from '@feathersjs/feathers'
-import { NotFound } from '@feathersjs/errors'
+import type { HookContext, Params, Application } from '@feathersjs/feathers'
+import { Forbidden, NotFound } from '@feathersjs/errors'
 import feathers from '@feathersjs/feathers'
 import { AdapterServiceOptions } from '@feathersjs/adapter-commons'
 import createDebug from 'debug'
@@ -17,6 +17,10 @@ import {
 
 const debug = createDebug('feathers-automerge-server/sync-service')
 
+export interface SyncServiceParams extends Params<Query> {
+  user?: any
+}
+
 export type RootDocument = {
   documents: SyncServiceInfo[]
 }
@@ -24,6 +28,7 @@ export type RootDocument = {
 export interface SyncServiceOptions {
   rootDocumentId: string
   syncServicePath: string
+  canAccess: <T = unknown>(query: Query, user: T) => Promise<boolean>
   initializeDocument(
     servicePath: string,
     query: Query,
@@ -36,7 +41,7 @@ export interface SyncServiceOptions {
   ): Promise<SyncServiceInfo[]>
 }
 
-export class AutomergeSyncServive {
+export class AutomergeSyncService {
   app?: Application
   rootDocument?: DocHandle<RootDocument>
   docHandles: Record<string, DocHandle<unknown>> = {}
@@ -47,7 +52,21 @@ export class AutomergeSyncServive {
     public options: SyncServiceOptions
   ) {}
 
-  async find() {
+  async checkAccess(query: Query, params: SyncServiceParams, throwError = true) {
+    if (params.provider) {
+      const allowed = await this.options.canAccess(query, params.user)
+
+      if (!allowed && throwError) {
+        throw new Forbidden('Access not allowed for this user')
+      }
+
+      return allowed
+    }
+
+    return true
+  }
+
+  async find(params: SyncServiceParams = {}) {
     if (!this.rootDocument) {
       throw new Error('Root document not available. Did you call app.listen() or app.setup()?')
     }
@@ -58,20 +77,29 @@ export class AutomergeSyncServive {
       throw new Error('Root document not available')
     }
 
-    return doc.documents
+    const results = await Promise.all(
+      doc.documents.map(async (document) => ({
+        document,
+        allowed: await this.checkAccess(document.query, params, false)
+      }))
+    )
+
+    return results.filter((result) => result.allowed).map((result) => result.document)
   }
 
-  async get(url: string) {
-    const handle = this.docHandles[url]
+  async get(url: string, params: SyncServiceParams = {}) {
+    const syncInfo = (await this.find(params)).find((document) => document.url === url)
 
-    if (!handle) {
+    if (!syncInfo || !this.docHandles[url] || !(await this.checkAccess(syncInfo.query, params, false))) {
       throw new NotFound(`Document ${url} not found`)
     }
+
+    const handle = this.docHandles[url]
 
     return handle.doc()
   }
 
-  async create(payload: SyncServiceCreate) {
+  async create(payload: SyncServiceCreate, params: SyncServiceParams = {}) {
     if (!this.app) {
       throw new Error('Application not available')
     }
@@ -83,6 +111,8 @@ export class AutomergeSyncServive {
     const docs = this.rootDocument.doc().documents
     const { query } = payload
     const existingDocument = docs.find((document) => _.isEqual(document.query, query))
+
+    await this.checkAccess(query, params)
 
     if (existingDocument) {
       debug(`Returning existing document ${existingDocument.url}`)
@@ -149,7 +179,7 @@ export class AutomergeSyncServive {
     return info
   }
 
-  async remove(url: string) {
+  async remove(url: string, params: SyncServiceParams = {}) {
     if (!this.rootDocument) {
       throw new Error('Root document not available')
     }
@@ -162,6 +192,8 @@ export class AutomergeSyncServive {
     }
 
     const info = docs[index]
+
+    await this.checkAccess(info.query, params)
 
     await new Promise<void>((resolve) => {
       this.rootDocument!.change((doc) => {
@@ -294,7 +326,7 @@ export class AutomergeSyncServive {
     this.docHandles[url] = handle
 
     // Sync existing data from the document to local services
-    //await this.syncExistingData(handle)
+    await this.syncExistingData(handle)
 
     handle.on('change', async ({ patches, patchInfo }) => {
       const { before, after } = patchInfo as any
