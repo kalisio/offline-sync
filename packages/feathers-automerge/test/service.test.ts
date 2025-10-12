@@ -5,6 +5,12 @@ import assert from 'assert'
 import { AutomergeService, SyncServiceDocument } from '../src/index.js'
 import { Repo } from '@automerge/automerge-repo'
 
+import { defineTestSuite } from 'feathers-adapter-vitest'
+
+const testSuite = defineTestSuite({
+  blacklist: ['._get', '._find', '._create', '._update', '._patch', '._remove']
+})
+
 describe('@kalisio/feathers-automerge', () => {
   type Person = {
     id: number
@@ -102,4 +108,6 @@ describe('@kalisio/feathers-automerge', () => {
 
     assert.ok(await removedEvent)
   })
+
+  testSuite({ app: app as any, serviceName: 'people', idProp: 'id' })
 })

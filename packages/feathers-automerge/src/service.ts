@@ -48,7 +48,7 @@ export class AutomergeService<T, C = T> {
     }
   }
 
-  get idField() {
+  get id() {
     return this.options.idField
   }
 
@@ -109,10 +109,10 @@ export class AutomergeService<T, C = T> {
   }
 
   async create(data: C) {
-    const id = (data as any)[this.idField]?.toString() || this.idGenerator()
+    const id = (data as any)[this.id]?.toString() || this.idGenerator()
     const item = JSON.parse(
       JSON.stringify({
-        [this.idField]: id,
+        [this.id]: id,
         [CHANGE_ID]: generateUUID(),
         ...data
       })
