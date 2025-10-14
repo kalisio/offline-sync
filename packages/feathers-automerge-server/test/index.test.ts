@@ -314,6 +314,147 @@ describe('@kalisio/feathers-automerge-server', () => {
     await expect(() => app.service('automerge').get(info.url)).rejects.toThrow()
   })
 
+  it('removes data from document when query no longer matches after patch', async () => {
+    // Create two documents with different username queries
+    const info1 = await app.service('automerge').create({
+      query: {
+        username: 'user1'
+      }
+    })
+
+    const info2 = await app.service('automerge').create({
+      query: {
+        username: 'user2'
+      }
+    })
+
+    // Create a todo for user1
+    const todo = await app.service('todos').create({
+      title: 'User1 todo',
+      completed: false,
+      username: 'user1'
+    })
+
+    // Get the documents
+    const document1 = await app.service('automerge').repo.find<ServicesDocument>(info1.url as AnyDocumentId)
+    const document2 = await app.service('automerge').repo.find<ServicesDocument>(info2.url as AnyDocumentId)
+
+    // Verify todo is in document1 but not in document2
+    expect(document1.doc().todos[todo.id]).toBeDefined()
+    expect(document1.doc().todos[todo.id].username).toBe('user1')
+    expect(document2.doc().todos[todo.id]).toBeUndefined()
+
+    // Update the todo to change the username to user2
+    await app.service('todos').patch(todo.id, {
+      username: 'user2'
+    })
+
+    // Wait a bit for the change to propagate
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Verify todo is now in document2 but not in document1
+    expect(document1.doc().todos[todo.id]).toBeUndefined()
+    expect(document2.doc().todos[todo.id]).toBeDefined()
+    expect(document2.doc().todos[todo.id].username).toBe('user2')
+  })
+
+  it('removes data from document when query no longer matches after update', async () => {
+    // Create documents
+    const info1 = await app.service('automerge').create({
+      query: {
+        username: 'updateuser1'
+      }
+    })
+
+    const info2 = await app.service('automerge').create({
+      query: {
+        username: 'updateuser2'
+      }
+    })
+
+    const todo = await app.service('todos').create({
+      title: 'Update test',
+      completed: false,
+      username: 'updateuser1'
+    })
+
+    const document1 = await app.service('automerge').repo.find<ServicesDocument>(info1.url as AnyDocumentId)
+    const document2 = await app.service('automerge').repo.find<ServicesDocument>(info2.url as AnyDocumentId)
+
+    expect(document1.doc().todos[todo.id]).toBeDefined()
+    expect(document2.doc().todos[todo.id]).toBeUndefined()
+
+    // Full update changing username
+    await app.service('todos').update(todo.id, {
+      title: 'Updated',
+      completed: true,
+      username: 'updateuser2'
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(document1.doc().todos[todo.id]).toBeUndefined()
+    expect(document2.doc().todos[todo.id]).toBeDefined()
+  })
+
+  it('handles data moving across multiple documents', async () => {
+    // Create three documents
+    const info1 = await app.service('automerge').create({
+      query: {
+        username: 'multiuser1'
+      }
+    })
+
+    const info2 = await app.service('automerge').create({
+      query: {
+        username: 'multiuser2'
+      }
+    })
+
+    const info3 = await app.service('automerge').create({
+      query: {
+        username: 'multiuser3'
+      }
+    })
+
+    const todo = await app.service('todos').create({
+      title: 'Multi user todo',
+      completed: false,
+      username: 'multiuser1'
+    })
+
+    const document1 = await app.service('automerge').repo.find<ServicesDocument>(info1.url as AnyDocumentId)
+    const document2 = await app.service('automerge').repo.find<ServicesDocument>(info2.url as AnyDocumentId)
+    const document3 = await app.service('automerge').repo.find<ServicesDocument>(info3.url as AnyDocumentId)
+
+    // Verify initial state
+    expect(document1.doc().todos[todo.id]).toBeDefined()
+    expect(document2.doc().todos[todo.id]).toBeUndefined()
+    expect(document3.doc().todos[todo.id]).toBeUndefined()
+
+    // Move to multiuser2
+    await app.service('todos').patch(todo.id, {
+      username: 'multiuser2'
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(document1.doc().todos[todo.id]).toBeUndefined()
+    expect(document2.doc().todos[todo.id]).toBeDefined()
+    expect(document3.doc().todos[todo.id]).toBeUndefined()
+
+    // Move to multiuser3
+    await app.service('todos').patch(todo.id, {
+      username: 'multiuser3'
+    })
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect(document1.doc().todos[todo.id]).toBeUndefined()
+    expect(document2.doc().todos[todo.id]).toBeUndefined()
+    expect(document3.doc().todos[todo.id]).toBeDefined()
+  })
+
   it('server to server sync', async () => {
     const info = await app.service('automerge').create({
       query: {
