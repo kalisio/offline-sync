@@ -8,7 +8,6 @@ import { Repo } from '@automerge/automerge-repo'
 import { defineTestSuite } from 'feathers-adapter-vitest'
 
 const testSuite = defineTestSuite({
-  only: ['.get + id + query'],
   blacklist: ['._get', '._find', '._create', '._update', '._patch', '._remove', '.events']
 })
 
