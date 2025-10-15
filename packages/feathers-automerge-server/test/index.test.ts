@@ -314,60 +314,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     await expect(() => app.service('automerge').get(info.url)).rejects.toThrow()
   })
 
-  it('server to server sync', async () => {
-    const info = await app.service('automerge').create({
-      query: {
-        username: 'syncuser'
-      }
-    })
-    const existingTodo = await app.service('todos').create({
-      title: 'Todo to sync',
-      completed: false,
-      username: 'syncuser'
-    })
-    const directory2 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test2')
-    const app2 = createApp({
-      directory: directory2,
-      rootDocumentId: rootDoc.url,
-      serverId: 'test-server-2',
-      syncServerUrl: 'http://localhost:8787/',
-      async authenticate() {
-        return true
-      },
-      async canAccess() {
-        return true
-      }
-    })
-
-    await app2.listen(8989)
-
-    const documents = await app.service('automerge').find()
-    const documents2 = await app2.service('automerge').find()
-
-    expect(info.url).toBeDefined()
-    expect(documents).toEqual(documents2)
-
-    const app2TodoCreated = new Promise((resolve) =>
-      app2.service('todos').once('created', (todo) => resolve(todo))
-    )
-    const syncTodo = await app.service('todos').create({
-      title: 'Todo to sync',
-      completed: false,
-      username: 'syncuser'
-    })
-
-    expect(syncTodo).toEqual(await app2TodoCreated)
-
-    const app2Todos = await app2.service('todos').find({
-      paginate: false
-    })
-
-    expect(app2Todos.length).toBeGreaterThan(1)
-
-    await app.service('automerge').repo.flush()
-    await app.service('automerge').repo.flush()
-  })
-
   describe('canAccess option', () => {
     let restrictedApp: Application<{
       todos: MemoryService<Todo>
@@ -514,6 +460,365 @@ describe('@kalisio/feathers-automerge-server', () => {
       }
       expect(() => validateSyncServerOptions(fullOptions)).not.toThrow()
       expect(validateSyncServerOptions(fullOptions)).toBe(true)
+    })
+  })
+
+  describe('server to server sync', () => {
+    it('server to server sync', async () => {
+      const info = await app.service('automerge').create({
+        query: {
+          username: 'syncuser'
+        }
+      })
+      const existingTodo = await app.service('todos').create({
+        title: 'Todo to sync',
+        completed: false,
+        username: 'syncuser'
+      })
+      const directory2 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test2')
+      const app2 = createApp({
+        directory: directory2,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-2',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      await app2.listen(8989)
+
+      const documents = await app.service('automerge').find()
+      const documents2 = await app2.service('automerge').find()
+
+      expect(info.url).toBeDefined()
+      expect(documents).toEqual(documents2)
+
+      const app2TodoCreated = new Promise((resolve) =>
+        app2.service('todos').once('created', (todo) => resolve(todo))
+      )
+      const syncTodo = await app.service('todos').create({
+        title: 'Todo to sync',
+        completed: false,
+        username: 'syncuser'
+      })
+
+      expect(syncTodo).toEqual(await app2TodoCreated)
+
+      const app2Todos = await app2.service('todos').find({
+        paginate: false
+      })
+
+      expect(app2Todos.length).toBeGreaterThan(1)
+
+      await app.service('automerge').repo.flush()
+      await app.service('automerge').repo.flush()
+    })
+
+    it('server to server sync - client server goes down and comes back up', async () => {
+      const info = await app.service('automerge').create({
+        query: {
+          username: 'resilientuser'
+        }
+      })
+
+      const directory3 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test3')
+      let app3 = createApp({
+        directory: directory3,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-3',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      const server3 = await app3.listen(8990)
+
+      // Wait for initial sync
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Verify initial sync
+      const initialDocs = await app3.service('automerge').find()
+      expect(initialDocs.length).toBeGreaterThan(0)
+
+      // Create a todo on server1 before server3 goes down
+      const todo1 = await app.service('todos').create({
+        title: 'Before shutdown',
+        completed: false,
+        username: 'resilientuser'
+      })
+
+      // Wait for sync
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Verify it synced
+      const todos3Before = await app3.service('todos').find({ paginate: false })
+      expect(todos3Before.find((t: Todo) => t.title === 'Before shutdown')).toBeDefined()
+
+      // Shut down server3
+      await new Promise<void>((resolve) => server3.close(() => resolve()))
+
+      // Create data on server1 while server3 is down
+      const todo2 = await app.service('todos').create({
+        title: 'While down',
+        completed: false,
+        username: 'resilientuser'
+      })
+
+      const todo3 = await app.service('todos').create({
+        title: 'Also while down',
+        completed: true,
+        username: 'resilientuser'
+      })
+
+      // Wait to ensure changes are persisted
+      await app.service('automerge').repo.flush()
+
+      // Restart server3 with same directory (persistence)
+      app3 = createApp({
+        directory: directory3,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-3',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      await app3.listen(8990)
+
+      // Wait for reconnection and sync
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Verify all data is synchronized
+      const todos3After = await app3.service('todos').find({ paginate: false })
+      const resilientUserTodos = todos3After.filter((t: Todo) => t.username === 'resilientuser')
+
+      expect(resilientUserTodos.find((t: Todo) => t.title === 'Before shutdown')).toBeDefined()
+      expect(resilientUserTodos.find((t: Todo) => t.title === 'While down')).toBeDefined()
+      expect(resilientUserTodos.find((t: Todo) => t.title === 'Also while down')).toBeDefined()
+
+      // Verify the data is correct
+      const whileDownTodo = resilientUserTodos.find((t: Todo) => t.title === 'While down')
+      expect(whileDownTodo?.completed).toBe(false)
+
+      const alsoWhileDownTodo = resilientUserTodos.find((t: Todo) => t.title === 'Also while down')
+      expect(alsoWhileDownTodo?.completed).toBe(true)
+    })
+
+    it('server to server sync - client server goes down with updates and recovers', async () => {
+      const directory4 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test4')
+
+      // Create document first
+      const info = await app.service('automerge').create({
+        query: {
+          username: 'recoveryuser'
+        }
+      })
+
+      const todo1 = await app.service('todos').create({
+        title: 'Before client start',
+        completed: false,
+        username: 'recoveryuser'
+      })
+
+      // Start client server
+      let app4 = createApp({
+        directory: directory4,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-4',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      let server4 = await app4.listen(8991)
+
+      // Wait for initial sync
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
+      // Verify sync
+      const todos4Initial = await app4.service('todos').find({ paginate: false })
+      expect(todos4Initial.find((t: Todo) => t.title === 'Before client start')).toBeDefined()
+
+      // Create data on main server
+      await app.service('todos').create({
+        title: 'From main before shutdown',
+        completed: false,
+        username: 'recoveryuser'
+      })
+
+      // Wait for sync
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      // Shut down client server
+      await new Promise<void>((resolve) => server4.close(() => resolve()))
+
+      // Create data on main server while client is down
+      await app.service('todos').create({
+        title: 'While client down',
+        completed: false,
+        username: 'recoveryuser'
+      })
+
+      await app.service('todos').create({
+        title: 'Also while client down',
+        completed: true,
+        username: 'recoveryuser'
+      })
+
+      // Ensure changes are persisted
+      await app.service('automerge').repo.flush()
+
+      // Restart client server
+      app4 = createApp({
+        directory: directory4,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-4',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      server4 = await app4.listen(8991)
+
+      // Wait for reconnection and sync
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Verify all data is synchronized on both servers
+      const todosMain = await app.service('todos').find({ paginate: false })
+      const todos4 = await app4.service('todos').find({ paginate: false })
+
+      const mainRecoveryUser = todosMain.filter((t: Todo) => t.username === 'recoveryuser')
+      const client4RecoveryUser = todos4.filter((t: Todo) => t.username === 'recoveryuser')
+
+      // Both should have all 4 todos
+      expect(mainRecoveryUser.length).toBe(4)
+      expect(client4RecoveryUser.length).toBe(4)
+
+      // Verify all todos exist on both servers
+      const expectedTitles = [
+        'Before client start',
+        'From main before shutdown',
+        'While client down',
+        'Also while client down'
+      ]
+
+      expectedTitles.forEach((title) => {
+        expect(mainRecoveryUser.find((t: Todo) => t.title === title)).toBeDefined()
+        expect(client4RecoveryUser.find((t: Todo) => t.title === title)).toBeDefined()
+      })
+
+      // Verify the completed status is correct
+      const alsoWhileDown = client4RecoveryUser.find((t: Todo) => t.title === 'Also while client down')
+      expect(alsoWhileDown?.completed).toBe(true)
+    })
+
+    it('server to server sync - bidirectional sync after reconnection', async () => {
+      const directory5 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test5')
+      let app5 = createApp({
+        directory: directory5,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-5',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      const server5 = await app5.listen(8992)
+
+      // Create document
+      const info = await app.service('automerge').create({
+        query: {
+          username: 'bidirectionaluser'
+        }
+      })
+
+      const initialTodo = await app.service('todos').create({
+        title: 'Initial sync',
+        completed: false,
+        username: 'bidirectionaluser'
+      })
+
+      // Wait for sync
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Shut down app5
+      await new Promise<void>((resolve) => server5.close(() => resolve()))
+
+      // Create data on both servers while disconnected
+      const todoMain = await app.service('todos').create({
+        title: 'From main while disconnected',
+        completed: false,
+        username: 'bidirectionaluser'
+      })
+
+      // Restart app5
+      app5 = createApp({
+        directory: directory5,
+        rootDocumentId: rootDoc.url,
+        serverId: 'test-server-5',
+        syncServerUrl: 'http://localhost:8787/',
+        async authenticate() {
+          return true
+        },
+        async canAccess() {
+          return true
+        }
+      })
+
+      await app5.listen(8992)
+
+      // Create data on app5 after restart
+      const todoApp5 = await app5.service('todos').create({
+        title: 'From app5 after restart',
+        completed: true,
+        username: 'bidirectionaluser'
+      })
+
+      // Wait for bidirectional sync
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Verify both servers have all data
+      const todosMain = await app.service('todos').find({ paginate: false })
+      const todos5 = await app5.service('todos').find({ paginate: false })
+
+      const mainBidirectional = todosMain.filter((t: Todo) => t.username === 'bidirectionaluser')
+      const app5Bidirectional = todos5.filter((t: Todo) => t.username === 'bidirectionaluser')
+
+      // Both should have all three todos
+      expect(mainBidirectional.length).toBe(3)
+      expect(app5Bidirectional.length).toBe(3)
+
+      expect(mainBidirectional.find((t: Todo) => t.title === 'Initial sync')).toBeDefined()
+      expect(mainBidirectional.find((t: Todo) => t.title === 'From main while disconnected')).toBeDefined()
+      expect(mainBidirectional.find((t: Todo) => t.title === 'From app5 after restart')).toBeDefined()
+
+      expect(app5Bidirectional.find((t: Todo) => t.title === 'Initial sync')).toBeDefined()
+      expect(app5Bidirectional.find((t: Todo) => t.title === 'From main while disconnected')).toBeDefined()
+      expect(app5Bidirectional.find((t: Todo) => t.title === 'From app5 after restart')).toBeDefined()
     })
   })
 })
