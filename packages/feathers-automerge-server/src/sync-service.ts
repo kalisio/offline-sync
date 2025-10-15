@@ -1,4 +1,4 @@
-import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
+import { AnyDocumentId, AutomergeUrl, DocHandle, Repo } from '@automerge/automerge-repo'
 import type { HookContext, Params, Application } from '@feathersjs/feathers'
 import { Forbidden, NotFound } from '@feathersjs/errors'
 import feathers from '@feathersjs/feathers'
@@ -28,6 +28,7 @@ export type RootDocument = {
 export interface SyncServiceOptions {
   rootDocumentId: string
   syncServicePath: string
+  syncDocumentUrl?: string
   canAccess: <T = unknown>(query: Query, user: T) => Promise<boolean>
   initializeDocument(
     servicePath: string,
@@ -67,6 +68,16 @@ export class AutomergeSyncService {
   }
 
   async find(params: SyncServiceParams = {}) {
+    // In single document mode, return the single document info
+    if (this.options.syncDocumentUrl) {
+      const info: SyncServiceInfo = {
+        url: this.options.syncDocumentUrl,
+        query: {}
+      }
+      const allowed = await this.checkAccess(info.query, params, false)
+      return allowed ? [info] : []
+    }
+
     if (!this.rootDocument) {
       throw new Error('Root document not available. Did you call app.listen() or app.setup()?')
     }
@@ -213,16 +224,23 @@ export class AutomergeSyncService {
       throw new Error('Feathers application not available. Did you call app.listen() or app.setup()?')
     }
 
-    if (!this.rootDocument) {
-      throw new Error('Root document not available')
-    }
-
     debug(`Handling service event ${servicePath} ${eventName}`)
 
     const { getDocumentsForData } = this.options
-    const documents = this.rootDocument.doc().documents
     const service = this.app.service(servicePath)
-    const syncDocuments = await getDocumentsForData(servicePath, data, documents)
+    let syncDocuments: SyncServiceInfo[]
+
+    // In single document mode, sync to the single document
+    if (this.options.syncDocumentUrl) {
+      syncDocuments = [{ url: this.options.syncDocumentUrl, query: {} }]
+    } else {
+      if (!this.rootDocument) {
+        throw new Error('Root document not available')
+      }
+      const documents = this.rootDocument.doc().documents
+      syncDocuments = await getDocumentsForData(servicePath, data, documents)
+    }
+
     const idField = service.id || 'id'
     const currentChangeId = context.params.automerge?.changeId || generateUUID()
     const updateDocument = async (handle: DocHandle<unknown>) => {
@@ -321,7 +339,7 @@ export class AutomergeSyncService {
   }
 
   async handleDocument({ url }: SyncServiceInfo) {
-    const handle = await this.repo.find(url)
+    const handle = await this.repo.find(url as AutomergeUrl)
 
     this.docHandles[url] = handle
 
@@ -385,11 +403,25 @@ export class AutomergeSyncService {
 
   async setup(app: Application, myPath: string) {
     this.app = app
-    this.rootDocument = await this.repo.find<RootDocument>(this.options.rootDocumentId as AnyDocumentId)
 
-    const infos = await this.find()
+    // If syncDocumentUrl is set, only load that document
+    if (this.options.syncDocumentUrl) {
+      debug(`Loading single document ${this.options.syncDocumentUrl}`)
 
-    await Promise.all(infos.map((info) => this.handleDocument(info)))
+      const info: SyncServiceInfo = {
+        url: this.options.syncDocumentUrl,
+        query: {}
+      }
+
+      await this.handleDocument(info)
+    } else {
+      // Normal mode: load root document and all documents
+      this.rootDocument = await this.repo.find<RootDocument>(this.options.rootDocumentId as AnyDocumentId)
+
+      const infos = await this.find()
+
+      await Promise.all(infos.map((info) => this.handleDocument(info)))
+    }
 
     Object.keys(app.services).forEach((servicePath) => {
       if (servicePath !== myPath) {
