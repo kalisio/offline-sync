@@ -69,10 +69,6 @@ export function validateSyncServerOptions(options: SyncServerOptions): options i
     throw new Error('SyncServerOptions.canAccess must be a function')
   }
 
-  // if (typeof options.getDocumentsForUser !== 'function') {
-  //   throw new Error('SyncServerOptions.getDocumentsForUser must be a function')
-  // }
-
   if (typeof options.initializeDocument !== 'function') {
     throw new Error('SyncServerOptions.initializeDocument must be a function')
   }
@@ -137,8 +133,6 @@ export function handleWsClient(options: SyncServerOptions) {
       throw new Error('syncDocumentUrl is required for client mode')
     }
 
-    // Parse the syncDocumentUrl to extract server URL and document URL
-    // Expected format: https://syncserver.com/automerge/automerge:214423
     const urlParts = syncDocumentUrl.split('/automerge/')
     if (urlParts.length !== 2) {
       throw new Error('syncDocumentUrl must be in format: https://server.com/automerge/automerge:documentId')
@@ -152,7 +146,6 @@ export function handleWsClient(options: SyncServerOptions) {
       network: [new BrowserWebSocketClientAdapter(url)]
     })
 
-    // Pass the document URL to the sync service
     const serviceOptions = {
       ...options,
       syncDocumentUrl: documentUrl

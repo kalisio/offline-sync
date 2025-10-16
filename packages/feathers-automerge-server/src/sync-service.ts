@@ -230,7 +230,6 @@ export class AutomergeSyncService {
     const service = this.app.service(servicePath)
     let syncDocuments: SyncServiceInfo[]
 
-    // In single document mode, sync to the single document
     if (this.options.syncDocumentUrl) {
       syncDocuments = [{ url: this.options.syncDocumentUrl, query: {} }]
     } else {
@@ -294,7 +293,6 @@ export class AutomergeSyncService {
 
     const meta = doc.__meta || {}
 
-    // Process each service's data in the document
     for (const servicePath of Object.keys(doc)) {
       if (servicePath === '__meta' || !this.app.service(servicePath)) {
         continue
@@ -308,23 +306,17 @@ export class AutomergeSyncService {
       const serviceMeta = meta[servicePath]
       const idField = serviceMeta?.idField || 'id'
 
-      // Process each record in the service
       for (const record of Object.values(serviceData)) {
         const { [CHANGE_ID]: changeId, ...data } = record as any
         const params = { automerge: { changeId, initialSync: true } } as Params
         const service = this.app.service(servicePath)
 
-        // Get the actual ID from the record using the service's idField
         const recordId = data[idField]
 
-        // Check if record already exists locally
         try {
           await service.get(recordId)
         } catch (error: any) {
-          // NOTE: comment test since it fails even when error is really NotFound
-          // if (error instanceof NotFound) {
           if (error?.code === 404) {
-            // Record doesn't exist, create it
             debug(`Creating new record ${servicePath}:${recordId} during initial sync`)
             await service.create(data, params)
           } else {
@@ -332,7 +324,6 @@ export class AutomergeSyncService {
           }
         }
 
-        // Mark this change as processed to avoid loops
         this.processedChanges.add(changeId)
       }
     }
@@ -343,7 +334,6 @@ export class AutomergeSyncService {
 
     this.docHandles[url] = handle
 
-    // Sync existing data from the document to local services
     await this.syncExistingData(handle)
 
     handle.on('change', async ({ patches, patchInfo }) => {
@@ -404,7 +394,6 @@ export class AutomergeSyncService {
   async setup(app: Application, myPath: string) {
     this.app = app
 
-    // If syncDocumentUrl is set, only load that document
     if (this.options.syncDocumentUrl) {
       debug(`Loading single document ${this.options.syncDocumentUrl}`)
 
@@ -415,7 +404,6 @@ export class AutomergeSyncService {
 
       await this.handleDocument(info)
     } else {
-      // Normal mode: load root document and all documents
       this.rootDocument = await this.repo.find<RootDocument>(this.options.rootDocumentId as AnyDocumentId)
 
       const infos = await this.find()
