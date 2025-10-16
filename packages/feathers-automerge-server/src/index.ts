@@ -36,7 +36,7 @@ export interface SyncServerOptions extends SyncServiceOptions {
   serverId: string
   authenticate: (app: Application, accessToken: string | null) => Promise<boolean>
   getAccessToken?: (app: Application) => Promise<string>
-  syncServerUrl?: string
+  syncDocumentUrl?: string
   syncServerWsPath?: string
 }
 
@@ -68,10 +68,6 @@ export function validateSyncServerOptions(options: SyncServerOptions): options i
   if (typeof options.canAccess !== 'function') {
     throw new Error('SyncServerOptions.canAccess must be a function')
   }
-
-  // if (typeof options.getDocumentsForUser !== 'function') {
-  //   throw new Error('SyncServerOptions.getDocumentsForUser must be a function')
-  // }
 
   if (typeof options.initializeDocument !== 'function') {
     throw new Error('SyncServerOptions.initializeDocument must be a function')
@@ -131,7 +127,18 @@ export function handleWss(options: SyncServerOptions) {
 
 export function handleWsClient(options: SyncServerOptions) {
   return async (context: AppSetupHookContext, next: NextFunction) => {
-    const { getAccessToken, syncServerUrl, directory, serverId } = options
+    const { getAccessToken, syncDocumentUrl, directory, serverId } = options
+
+    if (!syncDocumentUrl) {
+      throw new Error('syncDocumentUrl is required for client mode')
+    }
+
+    const urlParts = syncDocumentUrl.split('/automerge/')
+    if (urlParts.length !== 2) {
+      throw new Error('syncDocumentUrl must be in format: https://server.com/automerge/automerge:documentId')
+    }
+
+    const [syncServerUrl, documentUrl] = urlParts
     const accessToken = typeof getAccessToken === 'function' ? await getAccessToken(context.app) : ''
     const url = `${syncServerUrl}?accessToken=${accessToken}`
     const repo = createRepo(directory, {
@@ -139,10 +146,15 @@ export function handleWsClient(options: SyncServerOptions) {
       network: [new BrowserWebSocketClientAdapter(url)]
     })
 
-    context.app.use(options.syncServicePath, new AutomergeSyncService(repo, options))
+    const serviceOptions = {
+      ...options,
+      syncDocumentUrl: documentUrl
+    }
+
+    context.app.use(options.syncServicePath, new AutomergeSyncService(repo, serviceOptions))
 
     debug(
-      `Connecting to remote sync server ${syncServerUrl} ${accessToken ? 'with access token' : 'without access token'}`
+      `Connecting to remote sync server ${syncServerUrl} for document ${documentUrl} ${accessToken ? 'with access token' : 'without access token'}`
     )
 
     await next()
@@ -154,7 +166,7 @@ export function automergeServer(options: SyncServerOptions) {
     validateSyncServerOptions(options)
 
     const syncServerSetup =
-      typeof options.syncServerUrl === 'string' ? handleWsClient(options) : handleWss(options)
+      typeof options.syncDocumentUrl === 'string' ? handleWsClient(options) : handleWss(options)
 
     debug('Initializing automerge service', options)
 

@@ -75,7 +75,7 @@ The following options are available:
 - `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
 - `syncServerWsPath?: string`: The websocket path for the local sync server
 - `authenticate: (accessToken: string | null) => Promise<boolean>`: Authenticate an access token that was passed to the connection of the local sync server.
-- `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
+- `syncDocumentUrl?: string`: Connect to a specific automerge document on a remote sync server (for server to server synchronization). Format: `https://syncserver.com/automerge/automerge:documentId`. When set, only this single document will be loaded and synced.
 - `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
 - `canAccess: <T = unknown>(query: Query, user: T) => Promise<boolean>`: An async function that controls access to documents based on the query and user. Called for all operations when a `provider` is present in params (external calls).
   - Parameters: `query` (Query object - the document's query), `user` (the authenticated user from params)

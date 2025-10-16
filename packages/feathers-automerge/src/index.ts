@@ -41,17 +41,17 @@ export function createBrowserRepo(wsUrl: string) {
   })
 }
 
-export async function getDocHandle(app: AutomergeClientApp, url: AutomergeUrl): Promise<SyncDocumentHandle> {
+export async function getDocHandle(app: AutomergeClientApp, url: string): Promise<SyncDocumentHandle> {
   const repo = app.get('repo')
 
   if (!repo) {
     throw new Error('Repo not initialized on application')
   }
 
-  return repo.find<SyncServiceDocument>(url)
+  return repo.find<SyncServiceDocument>(url as AutomergeUrl)
 }
 
-export async function initAutomergeServices(app: AutomergeClientApp, url: AutomergeUrl) {
+export async function initAutomergeServices(app: AutomergeClientApp, url: string) {
   app.set('syncHandle', getDocHandle(app, url))
 
   const handle = await app.get('syncHandle')!
