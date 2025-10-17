@@ -7,8 +7,5 @@
   "authentication": {
     "secret": "FEATHERS_SECRET"
   },
-  "mongodb": "MONGODB",
-  "automerge": {
-    "rootDocumentId": "AUTOMERGE_ROOT_DOCUMENT"
-  }
+  "mongodb": "MONGODB"
 }

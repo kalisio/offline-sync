@@ -26,8 +26,6 @@ export type RootDocument = {
 }
 
 export interface SyncServiceOptions {
-  rootDocumentId: string
-  syncServicePath: string
   canAccess: (query: Query, params: Params) => Promise<boolean>
   initializeDocument(
     servicePath: string,
@@ -43,12 +41,13 @@ export interface SyncServiceOptions {
 
 export class AutomergeSyncService {
   app?: Application
-  rootDocument?: DocHandle<RootDocument>
   docHandles: Record<string, DocHandle<unknown>> = {}
   processedChanges = new Set<string>()
+  servicePath?: string
 
   constructor(
     public repo: Repo,
+    public rootDocument: DocHandle<RootDocument>,
     public options: SyncServiceOptions
   ) {}
 
@@ -67,10 +66,6 @@ export class AutomergeSyncService {
   }
 
   async find(params: SyncServiceParams = {}) {
-    if (!this.rootDocument) {
-      throw new Error('Root document not available. Did you call app.listen() or app.setup()?')
-    }
-
     const doc = this.rootDocument.doc()
 
     if (!doc) {
@@ -104,10 +99,6 @@ export class AutomergeSyncService {
       throw new Error('Application not available')
     }
 
-    if (!this.rootDocument) {
-      throw new Error('Root document not available')
-    }
-
     const docs = this.rootDocument.doc().documents
     const { query } = payload
     const existingDocument = docs.find((document) => _.isEqual(document.query, query))
@@ -119,7 +110,7 @@ export class AutomergeSyncService {
       return existingDocument
     }
 
-    const services = Object.keys(this.app.services).filter((path) => path !== this.options.syncServicePath)
+    const services = Object.keys(this.app.services).filter((path) => path !== this.servicePath)
     const data: SyncServiceDocument = {
       __meta: {}
     }
@@ -385,7 +376,7 @@ export class AutomergeSyncService {
 
   async setup(app: Application, myPath: string) {
     this.app = app
-    this.rootDocument = await this.repo.find<RootDocument>(this.options.rootDocumentId as AnyDocumentId)
+    this.servicePath = myPath
 
     const infos = await this.find()
 

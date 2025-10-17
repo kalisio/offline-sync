@@ -69,8 +69,7 @@ app.configure(
 
 The following options are available:
 
-- `directory: string`: The directory where the automerge repository data will be stored.
-- `rootDocumentId: string`: The URL/ID of the root document that contains the list of all synchronized documents. See [initialization](#initialization) how to create it.
+- `directory: string`: The directory where the automerge repository data will be stored. The root document ID will be automatically stored in a `root-document.json` file in this directory.
 - `serverId: string`: A unique identifier for this server instance (used to track data source).
 - `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
 - `syncServerWsPath?: string`: The websocket path for the local sync server
@@ -87,7 +86,7 @@ The following options are available:
 
 ## Initialization
 
-To initialise the root document, create the following `initialize.ts` in your server  main directory:
+The root document is automatically created and stored when the automerge server starts for the first time. The root document ID is saved in a `root-document.json` file in the specified `directory` option. If you need to manually create a root document for testing or initialization purposes, you can use the `createRootDocument` function:
 
 ```ts
 import { createRootDocument } from '@kalisio/feathers-automerge-server'
@@ -101,5 +100,3 @@ createRootDocument(directory).then(doc => {
   console.log(doc.url)
 })
 ```
-
-This file can be run directly and will output the URL that can be set as `rootDocumentId` in the configuration.

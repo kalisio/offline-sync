@@ -23,10 +23,6 @@ import { channels } from './channels.js'
 
 const app = express(feathers())
 
-if (!process.env.AUTOMERGE_ROOT_DOCUMENT) {
-  throw new Error('AUTOMERGE_ROOT_DOCUMENT environment variable is required')
-}
-
 // Load app configuration
 app.configure(configuration())
 app.use(cors())
