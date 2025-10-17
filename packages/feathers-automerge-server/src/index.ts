@@ -1,4 +1,4 @@
-import { PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
+import { AnyDocumentId, PeerId, Repo, RepoConfig } from '@automerge/automerge-repo'
 import { Application, NextFunction } from '@feathersjs/feathers'
 import {
   BrowserWebSocketClientAdapter,
@@ -7,8 +7,10 @@ import {
 import { NodeFSStorageAdapter } from '@automerge/automerge-repo-storage-nodefs'
 import { WebSocketServer } from 'ws'
 import type { Server as HttpServer } from 'http'
-import { AutomergeSyncService, SyncServiceOptions } from './sync-service.js'
+import { AutomergeSyncService, type SyncServiceOptions, type RootDocument } from './sync-service.js'
 import createDebug from 'debug'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 const debug = createDebug('feathers-automerge-server')
 
@@ -31,9 +33,50 @@ export async function createRootDocument(directory: string) {
   return doc
 }
 
+function getRootDocumentPath(directory: string): string {
+  return path.join(directory, 'automerge-server.json')
+}
+
+async function readRootDocumentId(directory: string): Promise<string | null> {
+  const filePath = getRootDocumentPath(directory)
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    const data = JSON.parse(content)
+    return data.rootDocumentId || null
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return null
+    }
+    throw error
+  }
+}
+
+async function writeRootDocumentId(directory: string, rootDocumentId: string): Promise<void> {
+  const filePath = getRootDocumentPath(directory)
+  const data = { rootDocumentId }
+
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+
+  debug(`Wrote root document ID to ${filePath}`)
+}
+
+async function getRootDocumentId(directory: string): Promise<string> {
+  const rootDocumentId = await readRootDocumentId(directory)
+
+  if (!rootDocumentId) {
+    debug('Root document ID not found, creating new root document')
+    const doc = await createRootDocument(directory)
+    await writeRootDocumentId(directory, doc.url)
+    return doc.url
+  }
+
+  return rootDocumentId
+}
+
 export interface SyncServerOptions extends SyncServiceOptions {
   directory: string
   serverId: string
+  rootDocumentId?: string
   authenticate: (app: Application, accessToken: string | null) => Promise<boolean>
   getAccessToken?: (app: Application) => Promise<string>
   syncServerUrl?: string
@@ -51,10 +94,6 @@ export function validateSyncServerOptions(options: SyncServerOptions): options i
 
   if (typeof options.serverId !== 'string' || options.serverId.trim() === '') {
     throw new Error('SyncServerOptions.serverId must be a non-empty string')
-  }
-
-  if (typeof options.rootDocumentId !== 'string' || options.rootDocumentId.trim() === '') {
-    throw new Error('SyncServerOptions.rootDocumentId must be a non-empty string')
   }
 
   if (typeof options.syncServicePath !== 'string' || options.syncServicePath.trim() === '') {
@@ -98,8 +137,10 @@ export function handleWss(options: SyncServerOptions) {
       network: [new NodeWSServerAdapter(wss as any)],
       sharePolicy: async () => false
     })
+    const rootDocumentId = await getRootDocumentId(options.directory)
+    const rootDocument = await repo.find<RootDocument>(rootDocumentId as AnyDocumentId)
 
-    context.app.use(syncServicePath, new AutomergeSyncService(repo, options))
+    context.app.use(syncServicePath, new AutomergeSyncService(repo, rootDocument, options))
     context.server.on('upgrade', async (request, socket, head) => {
       const url = new URL(request.url!, `http://${request.headers.host}`)
       const pathname = url.pathname
@@ -138,8 +179,10 @@ export function handleWsClient(options: SyncServerOptions) {
       peerId: serverId as PeerId,
       network: [new BrowserWebSocketClientAdapter(url)]
     })
+    const rootDocumentId = await getRootDocumentId(directory)
+    const rootDocument = await repo.find<RootDocument>(rootDocumentId as AnyDocumentId)
 
-    context.app.use(options.syncServicePath, new AutomergeSyncService(repo, options))
+    context.app.use(options.syncServicePath, new AutomergeSyncService(repo, rootDocument, options))
 
     debug(
       `Connecting to remote sync server ${syncServerUrl} ${accessToken ? 'with access token' : 'without access token'}`

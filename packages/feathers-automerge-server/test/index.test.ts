@@ -81,7 +81,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     app = createApp({
       directory,
       serverId: 'test-server',
-      rootDocumentId: rootDoc.url,
       async authenticate() {
         return true
       },
@@ -328,8 +327,8 @@ describe('@kalisio/feathers-automerge-server', () => {
     const directory2 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test2')
     const app2 = createApp({
       directory: directory2,
-      rootDocumentId: rootDoc.url,
       serverId: 'test-server-2',
+      rootDocumentId: rootDoc.url,
       syncServerUrl: 'http://localhost:8787/',
       async authenticate() {
         return true
@@ -378,7 +377,6 @@ describe('@kalisio/feathers-automerge-server', () => {
       restrictedApp = createApp({
         directory,
         serverId: 'restricted-server',
-        rootDocumentId: rootDoc.url,
         async authenticate() {
           return true
         },
@@ -487,7 +485,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     const validOptions: SyncServerOptions = {
       directory: '/path/to/directory',
       serverId: 'test-server',
-      rootDocumentId: 'test-root-doc',
       syncServicePath: 'automerge',
       authenticate: async () => true,
       initializeDocument: async () => [],
