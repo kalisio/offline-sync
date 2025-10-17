@@ -35,7 +35,7 @@
     "dev": "nodemon src/",
     "prettier": "npx prettier \"**/*.js\" --write",
     "mocha": "cross-env NODE_ENV=test mocha test/ --recursive --exit",
-    "test": "AUTOMERGE_ROOT_DOCUMENT=$(node initialize.js) npm run mocha",
+    "test": "npm run mocha",
     "bundle:client": "npm pack --pack-destination ./public",
     "lint": "eslint src test --ext .js",
     "lint:fix": "eslint src test --ext .js --fix"
