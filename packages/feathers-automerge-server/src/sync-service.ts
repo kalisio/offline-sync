@@ -28,7 +28,7 @@ export type RootDocument = {
 export interface SyncServiceOptions {
   rootDocumentId: string
   syncServicePath: string
-  canAccess: <T = unknown>(query: Query, user: T) => Promise<boolean>
+  canAccess: (query: Query, params: Params) => Promise<boolean>
   initializeDocument(
     servicePath: string,
     query: Query,
@@ -54,7 +54,7 @@ export class AutomergeSyncService {
 
   async checkAccess(query: Query, params: SyncServiceParams, throwError = true) {
     if (params.provider) {
-      const allowed = await this.options.canAccess(query, params.user)
+      const allowed = await this.options.canAccess(query, params)
 
       if (!allowed && throwError) {
         throw new Forbidden('Access not allowed for this user')
