@@ -382,8 +382,8 @@ describe('@kalisio/feathers-automerge-server', () => {
         async authenticate() {
           return true
         },
-        async canAccess(query, user) {
-          return (query as any).username === (user as any)?.username
+        async canAccess(query, params) {
+          return (query as any).username === (params as any).user?.username
         }
       })
 
