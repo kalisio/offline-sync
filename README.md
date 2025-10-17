@@ -14,12 +14,6 @@ yarn install
 
 ### Running the example
 
-First, run basic initialization:
-
-```sh
-yarn run init
-```
-
 With Docker running, the development system can be started like this
 
 ```sh
