@@ -37,7 +37,7 @@ export interface SyncClientOptions extends SyncOptionsBase {
   syncServerUrl?: string
 }
 
-export type SyncOptions = SyncServerOptions & SyncClientOptions
+export type SyncOptions = SyncServerOptions | SyncClientOptions
 
 export function validateSyncServerOptions(options: SyncOptions): options is SyncServerOptions {
   if (!options || typeof options !== 'object') {
@@ -54,10 +54,6 @@ export function validateSyncServerOptions(options: SyncOptions): options is Sync
 
   if (typeof options.syncServicePath !== 'string' || options.syncServicePath.trim() === '') {
     throw new Error('SyncServerOptions.syncServicePath must be a non-empty string')
-  }
-
-  if (typeof options.authenticate !== 'function') {
-    throw new Error('SyncServerOptions.authenticate must be a function')
   }
 
   if (typeof options.canAccess !== 'function') {
@@ -162,7 +158,9 @@ export function automergeServer(options: SyncOptions) {
     validateSyncServerOptions(options)
 
     const syncServerSetup =
-      typeof options.syncServerUrl === 'string' ? handleWsClient(options) : handleWss(options)
+      typeof (options as SyncClientOptions).syncServerUrl === 'string'
+        ? handleWsClient(options as SyncClientOptions)
+        : handleWss(options as SyncServerOptions)
 
     debug('Initializing automerge service', options)
 

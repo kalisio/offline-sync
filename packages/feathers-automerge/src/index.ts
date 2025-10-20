@@ -3,7 +3,7 @@ import { Repo } from '@automerge/automerge-repo'
 import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket'
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
 import { Application, NextFunction } from '@feathersjs/feathers'
-import { AutomergeService, IdGenerator } from './service.js'
+import { AutomergeService } from './service.js'
 import { Query, SyncServiceCreate, SyncServiceDocument, SyncServiceInfo } from './utils.js'
 
 export * from './service.js'
