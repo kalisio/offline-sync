@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { feathers } from '@feathersjs/feathers'
 import { MemoryService } from '@feathersjs/memory'
-import express, { Application } from '@feathersjs/express'
+import express, { type Application, rest, json } from '@feathersjs/express'
 import { AnyDocumentId, DocHandle, Repo } from '@automerge/automerge-repo'
 import { CHANGE_ID, generateUUID, Query, SyncServiceInfo } from '@kalisio/feathers-automerge'
 import _ from 'lodash'
@@ -33,6 +33,8 @@ type CreateAppOptions = Omit<
 export function createApp(options: CreateAppOptions) {
   const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncService }>())
 
+  app.use(json())
+  app.configure(rest())
   app.use('todos', new MemoryService())
   app.configure(
     automergeServer({
@@ -43,7 +45,7 @@ export function createApp(options: CreateAppOptions) {
           const { username } = query as { username: string }
           return app.service('todos').find({
             paginate: false,
-            query: { username }
+            query: username ? { username } : {}
           })
         }
 
@@ -51,7 +53,9 @@ export function createApp(options: CreateAppOptions) {
       },
       async getDocumentsForData(servicePath: string, data: unknown, documents: SyncServiceInfo[]) {
         if (servicePath === 'todos') {
-          return documents.filter((doc) => (data as Todo).username === doc.query.username)
+          return documents.filter((doc) => {
+            return !doc.query.username || (data as Todo).username === doc.query.username
+          })
         }
 
         return []
@@ -73,15 +77,11 @@ describe('@kalisio/feathers-automerge-server', () => {
     todos: MemoryService<Todo>
     automerge: AutomergeSyncService
   }>
-  let rootDoc: DocHandle<RootDocument>
 
   beforeAll(async () => {
-    rootDoc = await createRootDocument(directory)
-
     app = createApp({
       directory,
       serverId: 'test-server',
-      rootDocumentId: rootDoc.url,
       async authenticate() {
         return true
       },
@@ -122,7 +122,9 @@ describe('@kalisio/feathers-automerge-server', () => {
   })
 
   it('createRootDocument', async () => {
-    const doc = await createRootDocument(directory)
+    const doc = await createRootDocument(directory, {
+      documents: []
+    })
 
     expect(doc).toBeDefined()
   })
@@ -315,11 +317,6 @@ describe('@kalisio/feathers-automerge-server', () => {
   })
 
   it('server to server sync', async () => {
-    const info = await app.service('automerge').create({
-      query: {
-        username: 'syncuser'
-      }
-    })
     const existingTodo = await app.service('todos').create({
       title: 'Todo to sync',
       completed: false,
@@ -328,7 +325,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     const directory2 = path.join(__dirname, '..', '..', '..', 'data', 'automerge-test2')
     const app2 = createApp({
       directory: directory2,
-      rootDocumentId: rootDoc.url,
       serverId: 'test-server-2',
       syncServerUrl: 'http://localhost:8787/',
       async authenticate() {
@@ -341,11 +337,9 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     await app2.listen(8989)
 
-    const documents = await app.service('automerge').find()
     const documents2 = await app2.service('automerge').find()
 
-    expect(info.url).toBeDefined()
-    expect(documents).toEqual(documents2)
+    expect(documents2.length).to.equal(1)
 
     const app2TodoCreated = new Promise((resolve) =>
       app2.service('todos').once('created', (todo) => resolve(todo))
@@ -378,7 +372,6 @@ describe('@kalisio/feathers-automerge-server', () => {
       restrictedApp = createApp({
         directory,
         serverId: 'restricted-server',
-        rootDocumentId: rootDoc.url,
         async authenticate() {
           return true
         },
@@ -487,7 +480,6 @@ describe('@kalisio/feathers-automerge-server', () => {
     const validOptions: SyncServerOptions = {
       directory: '/path/to/directory',
       serverId: 'test-server',
-      rootDocumentId: 'test-root-doc',
       syncServicePath: 'automerge',
       authenticate: async () => true,
       initializeDocument: async () => [],
