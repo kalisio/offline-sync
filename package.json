@@ -29,6 +29,6 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "npm-check-updates": "^19.1.0"
+    "npm-check-updates": "^19.1.1"
   }
 }

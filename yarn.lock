@@ -1918,12 +1918,12 @@
   dependencies:
     undici-types "~7.10.0"
 
-"@types/node@^24.7.2":
-  version "24.7.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-24.7.2.tgz#5adf66b6e2ac5cab1d10a2ad3682e359cb652f4a"
-  integrity sha512-/NbVmcGTP+lj5oa4yiYxxeBjRivKQ5Ns1eSZeB99ExsEQ6rX5XYU1Zy/gGxY/ilqtD4Etx9mKyrPxZRetiahhA==
+"@types/node@^24.9.0":
+  version "24.9.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-24.9.0.tgz#4fb62beb8b322fe2955ac94f80ff5a58c941ebf4"
+  integrity sha512-MKNwXh3seSK8WurXF7erHPJ2AONmMwkI7zAMrXZDPIru8jRqkk6rGDBVbw4mLwfqA+ZZliiDPg05JQ3uW66tKQ==
   dependencies:
-    undici-types "~7.14.0"
+    undici-types "~7.16.0"
 
 "@types/normalize-package-data@^2.4.0":
   version "2.4.4"
@@ -3713,13 +3713,10 @@ fdir@^6.4.3, fdir@^6.5.0:
   resolved "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz"
   integrity sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==
 
-feathers-adapter-vitest@^0.0.13:
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/feathers-adapter-vitest/-/feathers-adapter-vitest-0.0.13.tgz#d0b0796e573903f617ff64ffe23484d070b5e275"
-  integrity sha512-4c+ddn+hczxkW57tewMcnaLZVMcRsNEaLEUKuAedF2t0jqSJ8Vc4IFAtCqDiQ2LQMKWd6zvGAzOYnd/KyD7eVQ==
-  dependencies:
-    "@feathersjs/errors" "^5.0.35"
-    "@feathersjs/feathers" "^5.0.35"
+feathers-adapter-vitest@^0.0.15:
+  version "0.0.15"
+  resolved "https://registry.yarnpkg.com/feathers-adapter-vitest/-/feathers-adapter-vitest-0.0.15.tgz#3e6e5410387a1d50247095dac1b9b89adcc6de56"
+  integrity sha512-C50cB8x/ALm/RLqBznBrfY+hTYTzoY4X4uu8f30E8UuoNkl8C8YKCWzc06N4xFDTs0TXZP2UMs6pC0U4a5Dpkg==
 
 fecha@^4.2.0:
   version "4.2.3"
@@ -5600,10 +5597,10 @@ npm-bundled@^4.0.0:
   dependencies:
     npm-normalize-package-bin "^4.0.0"
 
-npm-check-updates@^19.1.0:
-  version "19.1.0"
-  resolved "https://registry.yarnpkg.com/npm-check-updates/-/npm-check-updates-19.1.0.tgz#0b43059d21c22de20783bc777d6bb707a7f35e5c"
-  integrity sha512-qLtpdzOnuVN9qXrrVazjCRRQ3qh0aILIGwmlkF7w4hP9cRTOHynZYSFKRaVO+3EvzNgnXj0lm/XlWhc2TEOyfA==
+npm-check-updates@^19.1.1:
+  version "19.1.1"
+  resolved "https://registry.yarnpkg.com/npm-check-updates/-/npm-check-updates-19.1.1.tgz#75eec44611c85741084ce8e7df438127aeeb585e"
+  integrity sha512-vy/uNbaK6Xfj/QzM8OXeALZak67E0uHjUlbdT1YGy4bdj0xlBU6AVd+8bscY8vlDpyzL6Y7mxcrX8kzEDeEpNg==
 
 npm-install-checks@^7.1.0:
   version "7.1.2"
@@ -7345,10 +7342,10 @@ undici-types@~7.10.0:
   resolved "https://registry.npmjs.org/undici-types/-/undici-types-7.10.0.tgz"
   integrity sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag==
 
-undici-types@~7.14.0:
-  version "7.14.0"
-  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.14.0.tgz#4c037b32ca4d7d62fae042174604341588bc0840"
-  integrity sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA==
+undici-types@~7.16.0:
+  version "7.16.0"
+  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.16.0.tgz#ffccdff36aea4884cbfce9a750a0580224f58a46"
+  integrity sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==
 
 unique-filename@^4.0.0:
   version "4.0.0"
@@ -7472,10 +7469,10 @@ vite-plugin-wasm@^3.5.0:
   optionalDependencies:
     fsevents "~2.3.3"
 
-vite@^7.1.10:
-  version "7.1.10"
-  resolved "https://registry.yarnpkg.com/vite/-/vite-7.1.10.tgz#47c9970f3b0fe9057bfbcfeff8cd370edd7bd41b"
-  integrity sha512-CmuvUBzVJ/e3HGxhg6cYk88NGgTnBoOo7ogtfJJ0fefUWAxN/WDSUa50o+oVBxuIhO8FoEZW0j2eW7sfjs5EtA==
+vite@^7.1.11:
+  version "7.1.11"
+  resolved "https://registry.yarnpkg.com/vite/-/vite-7.1.11.tgz#4d006746112fee056df64985191e846ebfb6007e"
+  integrity sha512-uzcxnSDVjAopEUjljkWh8EIrg6tlzrjFUfMcR1EVsRDGwf/ccef0qQPRyOrROwhrTDaApueq+ja+KLPlzR/zdg==
   dependencies:
     esbuild "^0.25.0"
     fdir "^6.5.0"

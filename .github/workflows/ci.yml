@@ -8,10 +8,10 @@ jobs:
     environment: ci
     steps:
       - uses: actions/checkout@v2
-      - name: Use Node.js 22
+      - name: Use Node.js 20
         uses: actions/setup-node@v1
         with:
-          node-version: 22.x
+          node-version: 20.x
       - name: Install PNPM
         run: npm install -g yarn
       - name: Install Dependencies

@@ -31,7 +31,7 @@
     "@feathersjs/memory": "^5.0.35",
     "@types/debug": "^4.1.12",
     "@types/lodash": "^4.17.20",
-    "@types/node": "^24.7.2",
+    "@types/node": "^24.9.0",
     "@types/ws": "^8.18.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
