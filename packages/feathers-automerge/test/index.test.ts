@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { feathers } from '@feathersjs/feathers'
-import { SyncServiceCreate, SyncServiceDocument } from '../src/utils.js'
+import { generateUUID, SyncServiceCreate, SyncServiceDocument } from '../src/utils.js'
 import { automergeClient, stopSyncOffline, syncOffline } from '../src/index.js'
 import { Repo } from '@automerge/automerge-repo'
 
@@ -8,6 +8,7 @@ class DummySyncService {
   constructor(public repo: Repo) {}
 
   async create(data: SyncServiceCreate) {
+    const id = generateUUID()
     const handle = this.repo.create<SyncServiceDocument>({
       __meta: {
         people: {
@@ -15,7 +16,12 @@ class DummySyncService {
           paginate: false
         }
       },
-      people: {}
+      people: {
+        [id]: {
+          id,
+          name: 'John Doe'
+        }
+      }
     })
 
     return {
@@ -25,10 +31,30 @@ class DummySyncService {
   }
 }
 
+class DummyPeopleService {
+  people = [
+    {
+      id: generateUUID(),
+      name: 'Person'
+    }
+  ]
+
+  async find() {
+    return this.people
+  }
+
+  async create(data: any) {
+    const id = generateUUID()
+    this.people.push({ id, ...data })
+    return this.people.find((p) => p.id === id)
+  }
+}
+
 describe('@kailisio/feathers-automerge', () => {
-  const app = feathers()
+  const app = feathers<{ people: DummyPeopleService; automerge: DummySyncService }>()
   const repo = new Repo()
 
+  app.defaultService = () => new DummyPeopleService()
   app.configure(
     automergeClient({
       syncServerUrl: 'http://localhost:3000',
@@ -61,8 +87,10 @@ describe('@kailisio/feathers-automerge', () => {
 
     expect(person).toBeDefined()
 
+    expect(await app.service('people').find()).toHaveLength(2)
+
     await stopSyncOffline(app)
 
-    expect(() => app.service('people')).toThrow()
+    expect(await app.service('people').find()).toHaveLength(1)
   })
 })
