@@ -7,10 +7,10 @@ import {
 } from '@automerge/automerge-repo-network-websocket'
 import { WebSocketServer } from 'ws'
 import type { Server as HttpServer } from 'http'
-import { AutomergeSyncService, type RootDocument } from './sync-service.js'
+import { AutomergeSyncService, SyncServiceOptions, type RootDocument } from './sync-service.js'
 import createDebug from 'debug'
 import { SyncServiceInfo } from '@kalisio/feathers-automerge'
-import { createRepo, SyncServerOptions, getRootDocumentId, validateSyncServerOptions } from './utils.js'
+import { createRepo, getRootDocumentId } from './utils.js'
 
 export * from './utils.js'
 
@@ -19,6 +19,60 @@ const debug = createDebug('feathers-automerge-server')
 export type AppSetupHookContext = {
   app: Application
   server: HttpServer
+}
+
+export interface SyncOptionsBase extends SyncServiceOptions {
+  directory: string
+  serverId: string
+  syncServicePath: string
+}
+
+export interface SyncServerOptions extends SyncOptionsBase {
+  authenticate: (app: Application, accessToken: string | null) => Promise<boolean>
+  syncServerWsPath?: string
+}
+
+export interface SyncClientOptions extends SyncOptionsBase {
+  getAccessToken?: (app: Application) => Promise<string>
+  syncServerUrl?: string
+}
+
+export type SyncOptions = SyncServerOptions & SyncClientOptions
+
+export function validateSyncServerOptions(options: SyncOptions): options is SyncServerOptions {
+  if (!options || typeof options !== 'object') {
+    throw new Error('SyncServerOptions must be an object')
+  }
+
+  if (typeof options.directory !== 'string' || options.directory.trim() === '') {
+    throw new Error('SyncServerOptions.directory must be a non-empty string')
+  }
+
+  if (typeof options.serverId !== 'string' || options.serverId.trim() === '') {
+    throw new Error('SyncServerOptions.serverId must be a non-empty string')
+  }
+
+  if (typeof options.syncServicePath !== 'string' || options.syncServicePath.trim() === '') {
+    throw new Error('SyncServerOptions.syncServicePath must be a non-empty string')
+  }
+
+  if (typeof options.authenticate !== 'function') {
+    throw new Error('SyncServerOptions.authenticate must be a function')
+  }
+
+  if (typeof options.canAccess !== 'function') {
+    throw new Error('SyncServerOptions.canAccess must be a function')
+  }
+
+  if (typeof options.initializeDocument !== 'function') {
+    throw new Error('SyncServerOptions.initializeDocument must be a function')
+  }
+
+  if (typeof options.getDocumentsForData !== 'function') {
+    throw new Error('SyncServerOptions.getDocumentsForData must be a function')
+  }
+
+  return true
 }
 
 export function handleWss(options: SyncServerOptions) {
@@ -65,7 +119,7 @@ export function handleWss(options: SyncServerOptions) {
   }
 }
 
-export function handleWsClient(options: SyncServerOptions) {
+export function handleWsClient(options: SyncClientOptions) {
   return async (context: AppSetupHookContext, next: NextFunction) => {
     const { getAccessToken, syncServerUrl, directory, serverId, syncServicePath } = options
     const accessToken = typeof getAccessToken === 'function' ? await getAccessToken(context.app) : ''
@@ -103,7 +157,7 @@ export function handleWsClient(options: SyncServerOptions) {
   }
 }
 
-export function automergeServer(options: SyncServerOptions) {
+export function automergeServer(options: SyncOptions) {
   return function (app: Application) {
     validateSyncServerOptions(options)
 

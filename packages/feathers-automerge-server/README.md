@@ -69,13 +69,11 @@ app.configure(
 
 The following options are available:
 
-- `directory: string`: The directory where the automerge repository data will be stored. The root document ID will be automatically stored in a `root-document.json` file in this directory.
+## Common Options
+
+- `directory: string`: The directory where the automerge repository data will be stored. The root document ID will be automatically stored in a `automerge-server.json` file in this directory.
 - `serverId: string`: A unique identifier for this server instance (used to track data source).
 - `syncServicePath`: The service path where the automerge sync service will be mounted (e.g., 'automerge').
-- `syncServerWsPath?: string`: The websocket path for the local sync server
-- `authenticate: (accessToken: string | null) => Promise<boolean>`: Authenticate an access token that was passed to the connection of the local sync server.
-- `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
-- `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
 - `canAccess: (query: Query, params: Params) => Promise<boolean>`: An async function that controls access to documents based on the query and service call params. Called for all operations when a `provider` is present in params (external calls).
 - `initializeDocument`: An async function that initializes document data for a given service path and query. Called when creating new documents.
   - Parameters: `servicePath` (string), `query` (Query object), `documents` (array of existing SyncServiceInfo)
@@ -84,9 +82,20 @@ The following options are available:
   - Parameters: `servicePath` (string), `data` (the changed data), `documents` (array of SyncServiceInfo)
   - Returns: Promise<SyncServiceInfo[]> - Array of documents that should receive the update
 
+## Server Options
+
+- `syncServerWsPath?: string`: The websocket path for the local sync server
+- `authenticate: (accessToken: string | null) => Promise<boolean>`: Authenticate an access token that was passed to the connection of the local sync server.
+
+## Client Options
+
+- `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
+- `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
+
+
 ## Initialization
 
-The root document is automatically created and stored when the automerge server starts for the first time. The root document ID is saved in a `root-document.json` file in the specified `directory` option. If you need to manually create a root document for testing or initialization purposes, you can use the `createRootDocument` function:
+The root document is automatically created and stored when the automerge server starts for the first time. The root document ID is saved in a `automerge-server.json` file in the specified `directory` option. If you need to manually create a root document for testing or initialization purposes, you can use the `createRootDocument` function:
 
 ```ts
 import { createRootDocument } from '@kalisio/feathers-automerge-server'
