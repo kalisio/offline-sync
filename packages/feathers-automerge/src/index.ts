@@ -20,12 +20,6 @@ export type AutomergeClientOptions = {
   repo?: Repo
 }
 
-export type AutomergeAppConfig = {
-  repo: Repo
-  syncOptions: AutomergeClientOptions
-  syncHandle: Promise<SyncDocumentHandle> | null
-}
-
 export type AutomergeClientConfig = {
   syncOptions: AutomergeClientOptions
   syncHandle: Promise<SyncDocumentHandle> | null
