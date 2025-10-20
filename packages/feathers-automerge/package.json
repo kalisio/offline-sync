@@ -27,8 +27,8 @@
   "devDependencies": {
     "@feathersjs/adapter-tests": "^5.0.35",
     "@feathersjs/feathers": "^5.0.35",
-    "@types/node": "^24.7.2",
-    "feathers-adapter-vitest": "^0.0.13",
+    "@types/node": "^24.9.0",
+    "feathers-adapter-vitest": "^0.0.15",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }
