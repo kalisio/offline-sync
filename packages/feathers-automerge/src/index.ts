@@ -3,11 +3,12 @@ import { Repo } from '@automerge/automerge-repo'
 import { BrowserWebSocketClientAdapter } from '@automerge/automerge-repo-network-websocket'
 import { IndexedDBStorageAdapter } from '@automerge/automerge-repo-storage-indexeddb'
 import { Application, NextFunction } from '@feathersjs/feathers'
-import { AutomergeService } from './service.js'
 import { Query, SyncServiceCreate, SyncServiceDocument, SyncServiceInfo } from './utils.js'
+import { serviceWrapper } from './wrapper.js'
 
 export * from './service.js'
 export * from './utils.js'
+export * from './wrapper.js'
 
 export const LOCALSTORAGE_KEY = 'feathers-automerge'
 
@@ -18,12 +19,6 @@ export type AutomergeClientOptions = {
   syncServicePath: string
   authentication: boolean
   repo?: Repo
-}
-
-export type AutomergeAppConfig = {
-  repo: Repo
-  syncOptions: AutomergeClientOptions
-  syncHandle: Promise<SyncDocumentHandle> | null
 }
 
 export type AutomergeClientConfig = {
@@ -51,28 +46,6 @@ export async function getDocHandle(app: AutomergeClientApp, url: AutomergeUrl): 
   return repo.find<SyncServiceDocument>(url)
 }
 
-export async function initAutomergeServices(app: AutomergeClientApp, url: AutomergeUrl) {
-  app.set('syncHandle', getDocHandle(app, url))
-
-  const handle = await app.get('syncHandle')!
-  const doc = await handle.doc()
-
-  Object.keys(doc).forEach((path) => {
-    if (path !== '__meta') {
-      const { idField, paginate } = doc.__meta[path]
-
-      app.use(
-        path,
-        new AutomergeService(handle, {
-          idField,
-          paginate,
-          path
-        })
-      )
-    }
-  })
-}
-
 export async function syncOffline(app: AutomergeClientApp, payload: SyncServiceCreate) {
   const { syncServicePath } = app.get('syncOptions')
   const info: SyncServiceInfo = await app.service(syncServicePath).create(payload)
@@ -81,7 +54,7 @@ export async function syncOffline(app: AutomergeClientApp, payload: SyncServiceC
     window.localStorage.setItem(LOCALSTORAGE_KEY, info.url)
   }
 
-  await initAutomergeServices(app, info.url)
+  app.set('syncHandle', getDocHandle(app, info.url))
 
   return info
 }
@@ -92,16 +65,6 @@ export async function stopSyncOffline(app: AutomergeClientApp, remove = false) {
   if (!handle) {
     return
   }
-
-  const doc = await handle.doc()
-
-  await Promise.all(
-    Object.keys(doc).map(async (path) => {
-      if (path !== '__meta') {
-        await app.unuse(path)
-      }
-    })
-  )
 
   app.get('repo').delete(handle.documentId)
   app.set('syncHandle', null)
@@ -127,7 +90,7 @@ export function automergeClient(options: AutomergeClientOptions) {
       const url = window.localStorage.getItem(LOCALSTORAGE_KEY)
 
       if (url) {
-        await initAutomergeServices(app, url as AutomergeUrl)
+        app.set('syncHandle', getDocHandle(app, url as AutomergeUrl))
       }
     }
   }
@@ -135,6 +98,7 @@ export function automergeClient(options: AutomergeClientOptions) {
   return function (app: Application) {
     app.set('syncOptions', options)
     app.set('syncHandle', null)
+    app.configure(serviceWrapper)
 
     if (options.authentication) {
       app.on('login', (authResult) => {
