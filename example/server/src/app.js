@@ -55,13 +55,20 @@ app.configure(
         }),
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
         }
       })
+
+      if (response.status >= 400) {
+        console.error(await response.text())
+        throw new Error('Failed to authenticate with remote sync server')
+      }
+
       const { accessToken } = await response.json()
       return accessToken
     },
-    async authenticate(accessToken) {
+    async authenticate(app, accessToken) {
       if (!accessToken) {
         return false
       }
@@ -75,10 +82,9 @@ app.configure(
     },
     async initializeDocument(servicePath, query) {
       if (servicePath === 'todos') {
-        const { username } = query
         return app.service('todos').find({
           paginate: false,
-          query: { username }
+          query
         })
       }
 
@@ -86,7 +92,7 @@ app.configure(
     },
     async getDocumentsForData(servicePath, data, documents) {
       if (servicePath === 'todos') {
-        return documents.filter(doc => data.username === doc.query.username)
+        return documents.filter(doc => !doc.query.username || data.username === doc.query.username)
       }
 
       return []
