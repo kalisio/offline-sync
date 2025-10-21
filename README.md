@@ -1,5 +1,10 @@
 # Feathers Offline Synchronization
 
+Packages for integrating Feathers API and client applications with [Automerge](https://automerge.org/) for offline capabilities and server to server synchronization:
+
+- `@kalisio/feathers-automerge`: A service implementation on top of the Automerge CRDT as well as a client for offline synchronization with a `feathers-automerge-server`. Read the full documentation [here](packages/feathers-automerge/README.md).
+- `@kalisio/feathers-automerge-server`: Integrates an Automerge sync server into an existing Feathers server and synchronizes offline documents with clients and other servers. Read the full documentation [here](packages/feathers-automerge-server/README.md).
+
 ## Example
 
 This repository contains an example for a Feathers API with full offline-first capabilities. It comes in several components:
@@ -9,6 +14,8 @@ This repository contains an example for a Feathers API with full offline-first c
 Install all the dependencies in the monorepo with
 
 ```sh
+git clone git@github.com:kalisio/offline-sync.git
+cd offline-sync
 yarn install
 ```
 
