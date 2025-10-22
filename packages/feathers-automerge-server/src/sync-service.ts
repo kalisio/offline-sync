@@ -289,6 +289,7 @@ export class AutomergeSyncService {
 
         // Get the actual ID from the record using the service's idField
         const recordId = data[idField]
+        if (!recordId) continue
 
         // Check if record already exists locally
         try {
