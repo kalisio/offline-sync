@@ -1,4 +1,5 @@
 import type { DocHandle, UrlHeads } from '@automerge/automerge-repo'
+import type { Patch, PatchInfo } from '@automerge/automerge'
 import type { EventEmitter } from 'node:events'
 import sift from 'sift'
 import { sorter, getLimit, select } from '@feathersjs/adapter-commons'
@@ -25,6 +26,13 @@ export interface Paginated<T> {
   data: T[]
 }
 
+// Type for the change event callback parameters
+interface ChangeEventParams {
+  patches: Patch[]
+  patchInfo: PatchInfo<SyncServiceDocument>
+  handle: DocHandle<SyncServiceDocument>
+}
+
 export type FindParams = Params<Record<string, any>>
 
 export const CHANGE_ID = '__change'
@@ -32,6 +40,7 @@ export const CHANGE_ID = '__change'
 export class AutomergeService<T, C = T> {
   events = ['created', 'patched', 'removed']
   handle: DocHandle<SyncServiceDocument>
+  onDocumentChangedListener: ((payload: ChangeEventParams) => void) | null = null
   docHeads: unknown[] = []
   public options: AutomergeServiceOptions
 
@@ -84,6 +93,61 @@ export class AutomergeService<T, C = T> {
     }
 
     return multi.includes(method)
+  }
+
+  onDocumentChanged({ patches, patchInfo, handle }: ChangeEventParams) {
+    const { before, after } = patchInfo
+    const emitter = this as unknown as EventEmitter
+    const heads = handle.heads()
+
+    if (typeof emitter.emit !== 'function') {
+      return
+    }
+
+    // Only continue if document head has moved
+    if (heads.every((head, index) => head === this.docHeads[index])) {
+      return
+    }
+
+    this.docHeads = heads
+
+    const ids = new Set(
+      patches
+        .map((patch) => (patch.path[0] === this.options.path ? patch.path[1] : null))
+        .filter((id) => id != null)
+    )
+
+    const { path } = this.options
+
+    for (const id of ids) {
+      if (!before[path] || !before[path][id]) {
+        emitter.emit('created', after[path][id])
+      } else if (!after[path][id]) {
+        emitter.emit('removed', before[path][id])
+      } else if (before[path] && before[path][id]) {
+        emitter.emit('patched', after[path][id])
+      }
+    }
+  }
+
+  listenToDocumentChange () {
+    if (!this.handle) return
+    // Not sure why but it appears this is not correctly bound
+    this.onDocumentChangedListener = this.onDocumentChanged.bind(this)
+    this.handle.on('change', this.onDocumentChangedListener)
+  }
+  unlistenToDocumentChange () {
+    if (!this.handle) return
+    if (this.onDocumentChangedListener) this.handle.off('change', this.onDocumentChangedListener)
+    this.onDocumentChangedListener = null
+  }
+
+  setHandle(handle: DocHandle<SyncServiceDocument>) {
+    // In case handle already set unlisten to previous events
+    this.unlistenToDocumentChange()
+    this.handle = handle
+    // New handle so listen to events
+    this.listenToDocumentChange()
   }
 
   async find(params?: FindParams & { paginate: false }): Promise<T[]>
@@ -387,39 +451,7 @@ export class AutomergeService<T, C = T> {
   }
 
   async setup() {
-    this.handle.on('change', ({ patches, patchInfo, handle }) => {
-      const { before, after } = patchInfo
-      const emitter = this as unknown as EventEmitter
-      const heads = handle.heads()
-
-      if (typeof emitter.emit !== 'function') {
-        return
-      }
-
-      // Only continue if document head has moved
-      if (heads.every((head, index) => head === this.docHeads[index])) {
-        return
-      }
-
-      this.docHeads = heads
-
-      const ids = new Set(
-        patches
-          .map((patch) => (patch.path[0] === this.options.path ? patch.path[1] : null))
-          .filter((id) => id != null)
-      )
-
-      const { path } = this.options
-
-      for (const id of ids) {
-        if (!before[path] || !before[path][id]) {
-          emitter.emit('created', after[path][id])
-        } else if (!after[path][id]) {
-          emitter.emit('removed', before[path][id])
-        } else if (before[path] && before[path][id]) {
-          emitter.emit('patched', after[path][id])
-        }
-      }
-    })
+    // In case handle already set listen to events
+    this.listenToDocumentChange()
   }
 }
