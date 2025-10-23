@@ -358,6 +358,8 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     expect(app2Todos.length).toBeGreaterThan(1)
 
+    await new Promise((resolve) => setTimeout(resolve, 250))
+
     await app.service('automerge').repo.flush()
     await app.service('automerge').repo.flush()
   })
