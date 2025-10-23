@@ -25,15 +25,7 @@ describe('@kalisio/feathers-automerge', () => {
   }>()
   const repo = new Repo()
   const handle = repo.create<SyncServiceDocument>({
-    __meta: {
-      peeps: {
-        idField: 'id',
-        paginate: {
-          default: 10,
-          max: 50
-        }
-      }
-    },
+    __meta: {},
     peeps: {}
   })
 
@@ -48,10 +40,23 @@ describe('@kalisio/feathers-automerge', () => {
     await app.setup()
   })
 
-  test('basic functionality', async () => {
+  test('basic functionality, works with meta pagination options', async () => {
     const person = await app.service('people').create({
       name: 'John Doe',
       age: 30
+    })
+
+    await new Promise<void>((resolve) => {
+      handle.change((d) => {
+        d.__meta.peeps = {
+          idField: 'id',
+          paginate: {
+            default: 10,
+            max: 50
+          }
+        }
+        resolve()
+      })
     })
 
     assert.ok(person.id)
@@ -69,15 +74,12 @@ describe('@kalisio/feathers-automerge', () => {
 
     assert.equal((await createdEvent).name, 'Jane Doe')
 
-    const people = await app.service('people').find({
-      paginate: true
-    })
+    const people = await app.service('people').find()
 
     assert.equal(people.total, 2)
     assert.equal(people.data.length, 2)
 
     const matchedPeople = await app.service('people').find({
-      paginate: true,
       query: {
         name: 'Jane Doe'
       }
@@ -107,6 +109,13 @@ describe('@kalisio/feathers-automerge', () => {
     await app.service('people').remove(person.id)
 
     assert.ok(await removedEvent)
+
+    await new Promise<void>((resolve) => {
+      handle.change((d) => {
+        delete d.__meta.peeps
+        resolve()
+      })
+    })
   })
 
   testSuite({ app: app as any, serviceName: 'people', idProp: 'id' })

@@ -68,8 +68,10 @@ export class AutomergeService<T, C = T> {
   }
 
   getOptions(params: Params = {}) {
+    const doc = this.handle.doc()
     return {
       ...this.options,
+      ...doc.__meta[this.options.path],
       ...(params as any).adapter
     }
   }
@@ -130,13 +132,13 @@ export class AutomergeService<T, C = T> {
     }
   }
 
-  listenToDocumentChange () {
+  listenToDocumentChange() {
     if (!this.handle) return
     // Not sure why but it appears this is not correctly bound
     this.onDocumentChangedListener = this.onDocumentChanged.bind(this)
     this.handle.on('change', this.onDocumentChangedListener)
   }
-  unlistenToDocumentChange () {
+  unlistenToDocumentChange() {
     if (!this.handle) return
     if (this.onDocumentChangedListener) this.handle.off('change', this.onDocumentChangedListener)
     this.onDocumentChangedListener = null
@@ -150,7 +152,7 @@ export class AutomergeService<T, C = T> {
     this.listenToDocumentChange()
   }
 
-  async find(params?: FindParams & { paginate: false }): Promise<T[]>
+  async find(params: FindParams & { paginate: false }): Promise<T[]>
   async find(params?: FindParams & { paginate?: true }): Promise<Paginated<T>>
   async find(params: FindParams & { paginate?: boolean } = {}): Promise<T[] | Paginated<T>> {
     const doc = this.handle.doc()
