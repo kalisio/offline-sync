@@ -132,3 +132,4 @@ The following options are available:
 
 - `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
 - `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
+- `createRootDocument: (app: Application) => Promise<SyncServiceInfo>`: Create a new root document for the application. Return the documents that should be synced with the remote server.
