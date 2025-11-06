@@ -11,6 +11,7 @@ import _ from 'lodash'
 import {
   automergeServer,
   createRootDocument,
+  SyncOptions,
   SyncServerOptions,
   validateSyncServerOptions
 } from '../src/index.js'
@@ -25,12 +26,7 @@ type Todo = {
 
 type ServicesDocument = { todos: Record<string, Todo & { [CHANGE_ID]: string }> }
 
-type CreateAppOptions = Omit<
-  SyncServerOptions,
-  'initializeDocument' | 'getDocumentsForData' | 'syncServicePath'
->
-
-export function createApp(options: CreateAppOptions) {
+export function createApp(options: Partial<SyncOptions>) {
   const app = express(feathers<{ todos: MemoryService; automerge: AutomergeSyncService }>())
 
   app.use(json())
@@ -60,7 +56,7 @@ export function createApp(options: CreateAppOptions) {
 
         return []
       }
-    })
+    } as SyncOptions)
   )
 
   return app
@@ -327,6 +323,12 @@ describe('@kalisio/feathers-automerge-server', () => {
       directory: directory2,
       serverId: 'test-server-2',
       syncServerUrl: 'http://localhost:8787/',
+      createRootDocument: async () => {
+        const document = await app.service('automerge').create({
+          query: {}
+        })
+        return [document]
+      },
       async authenticate() {
         return true
       },
@@ -339,6 +341,7 @@ describe('@kalisio/feathers-automerge-server', () => {
 
     const documents2 = await app2.service('automerge').find()
 
+    expect(existingTodo).to.toBeDefined()
     expect(documents2.length).to.equal(1)
 
     const app2TodoCreated = new Promise((resolve) =>
