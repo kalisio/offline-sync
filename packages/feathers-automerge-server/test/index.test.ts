@@ -10,7 +10,7 @@ import _ from 'lodash'
 
 import {
   automergeServer,
-  createRootDocument,
+  getInitialDocuments,
   SyncOptions,
   SyncServerOptions,
   validateSyncServerOptions
@@ -117,8 +117,8 @@ describe('@kalisio/feathers-automerge-server', () => {
     })
   })
 
-  it('createRootDocument', async () => {
-    const doc = await createRootDocument(directory, {
+  it('getInitialDocuments', async () => {
+    const doc = await getInitialDocuments(directory, {
       documents: []
     })
 
@@ -323,7 +323,7 @@ describe('@kalisio/feathers-automerge-server', () => {
       directory: directory2,
       serverId: 'test-server-2',
       syncServerUrl: 'http://localhost:8787/',
-      createRootDocument: async () => {
+      getInitialDocuments: async () => {
         const document = await app.service('automerge').create({
           query: {}
         })

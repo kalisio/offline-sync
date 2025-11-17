@@ -14,7 +14,7 @@ export function createRepo(dir: string, options: Omit<RepoConfig, 'storage'> = {
   })
 }
 
-export async function createRootDocument(directory: string, initialData: RootDocument) {
+export async function getInitialDocuments(directory: string, initialData: RootDocument) {
   const repo = createRepo(directory)
   const doc = repo.create(initialData)
 
@@ -61,7 +61,7 @@ export async function getRootDocumentId(
   if (!rootDocumentId) {
     debug('Root document ID not found, creating new root document')
     const initialData = await initialize()
-    const doc = await createRootDocument(directory, initialData)
+    const doc = await getInitialDocuments(directory, initialData)
 
     await writeRootDocumentId(directory, doc.url)
 

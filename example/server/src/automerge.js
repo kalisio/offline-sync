@@ -66,7 +66,7 @@ export function automerge(app) {
       const { accessToken } = await response.json()
       return accessToken
     },
-    async createRootDocument() {
+    async getInitialDocuments() {
       const accessToken = await serverToServerOptions.getAccessToken()
       const response = await fetch('http://localhost:3030/automerge', {
         body: JSON.stringify({

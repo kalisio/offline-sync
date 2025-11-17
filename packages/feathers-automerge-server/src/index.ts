@@ -25,7 +25,7 @@ export interface SyncOptionsBase extends SyncServiceOptions {
   directory: string
   serverId: string
   syncServicePath: string
-  createRootDocument?: (app: Application) => Promise<SyncServiceInfo[]>
+  getInitialDocuments?: (app: Application) => Promise<SyncServiceInfo[]>
 }
 
 export interface SyncServerOptions extends SyncOptionsBase {
@@ -78,7 +78,7 @@ export function handleWss(options: SyncServerOptions) {
       syncServicePath,
       authenticate,
       syncServerWsPath = '',
-      createRootDocument = async () => []
+      getInitialDocuments = async () => []
     } = options
     const wss = new WebSocketServer({ noServer: true })
     const repo = createRepo(options.directory, {
@@ -87,7 +87,7 @@ export function handleWss(options: SyncServerOptions) {
       sharePolicy: async () => false
     })
     const rootDocumentId = await getRootDocumentId(options.directory, async () => {
-      const documents = await createRootDocument(context.app)
+      const documents = await getInitialDocuments(context.app)
       return { documents }
     })
     const rootDocument = await repo.find<RootDocument>(rootDocumentId as AnyDocumentId)
@@ -124,7 +124,7 @@ export function handleWss(options: SyncServerOptions) {
 
 export function handleWsClient(options: SyncClientOptions) {
   return async (context: AppSetupHookContext, next: NextFunction) => {
-    const { getAccessToken, syncServerUrl, directory, serverId, syncServicePath, createRootDocument } =
+    const { getAccessToken, syncServerUrl, directory, serverId, syncServicePath, getInitialDocuments } =
       options
     const accessToken = typeof getAccessToken === 'function' ? await getAccessToken(context.app) : ''
     const url = `${syncServerUrl}?accessToken=${accessToken}`
@@ -133,12 +133,12 @@ export function handleWsClient(options: SyncClientOptions) {
       network: [new BrowserWebSocketClientAdapter(url)]
     })
 
-    if (typeof createRootDocument !== 'function') {
-      throw new Error('createRootDocument function has to be provided for server to server sync')
+    if (typeof getInitialDocuments !== 'function') {
+      throw new Error('getInitialDocuments function has to be provided for server to server sync')
     }
 
     const rootDocumentId = await getRootDocumentId(directory, async () => {
-      const documents = await createRootDocument(context.app)
+      const documents = await getInitialDocuments(context.app)
 
       return { documents }
     })

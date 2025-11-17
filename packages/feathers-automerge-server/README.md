@@ -122,6 +122,7 @@ The following options are available:
 - `canAccess(query: Query, params: Params): Promise<boolean>`: An async function that controls access to documents based on the query and service call params. Called for all operations when a `provider` is present in params (external calls).
 - `initializeDocument: (servicePath: string, query: Query, documents: SyncServiceInfo[]) => Promise<unknown[]>`: An async function that initializes document data for a given service path and query. Called when creating new documents.
 - `getDocumentsForData: (servicePath: string, data: any, documents: SyncServiceInfo[]) => Promise<SyncServiceInfo[]>`: An async function that determines which documents should be updated when service data changes.
+- `getInitialDocuments: (app: Application) => Promise<SyncServiceInfo>`: Return the documents to load when there are no local documents on this server. This is useful when running as a client (`syncServerUrl` is pointing to another server) to determine which documents should be synced with this instance.
 
 ### Server Options
 
@@ -132,4 +133,3 @@ The following options are available:
 
 - `syncServerUrl?: string`: Connect to another remote sync server instead (for server to server synchronization)
 - `getAccessToken?: () => Promise<string>`: Get an access token for the remote sync server.
-- `createRootDocument: (app: Application) => Promise<SyncServiceInfo>`: Create a new root document for the application. Return the documents that should be synced with the remote server.
