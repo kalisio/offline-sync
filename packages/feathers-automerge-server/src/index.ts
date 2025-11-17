@@ -25,6 +25,7 @@ export interface SyncOptionsBase extends SyncServiceOptions {
   directory: string
   serverId: string
   syncServicePath: string
+  getInitialDocuments?: (app: Application) => Promise<SyncServiceInfo[]>
 }
 
 export interface SyncServerOptions extends SyncOptionsBase {
@@ -73,7 +74,12 @@ export function validateSyncServerOptions(options: SyncOptions): options is Sync
 
 export function handleWss(options: SyncServerOptions) {
   return async (context: AppSetupHookContext, next: NextFunction) => {
-    const { syncServicePath, authenticate, syncServerWsPath = '' } = options
+    const {
+      syncServicePath,
+      authenticate,
+      syncServerWsPath = '',
+      getInitialDocuments = async () => []
+    } = options
     const wss = new WebSocketServer({ noServer: true })
     const repo = createRepo(options.directory, {
       peerId: options.serverId as PeerId,
@@ -81,7 +87,8 @@ export function handleWss(options: SyncServerOptions) {
       sharePolicy: async () => false
     })
     const rootDocumentId = await getRootDocumentId(options.directory, async () => {
-      return { documents: [] }
+      const documents = await getInitialDocuments(context.app)
+      return { documents }
     })
     const rootDocument = await repo.find<RootDocument>(rootDocumentId as AnyDocumentId)
 
@@ -117,29 +124,23 @@ export function handleWss(options: SyncServerOptions) {
 
 export function handleWsClient(options: SyncClientOptions) {
   return async (context: AppSetupHookContext, next: NextFunction) => {
-    const { getAccessToken, syncServerUrl, directory, serverId, syncServicePath } = options
+    const { getAccessToken, syncServerUrl, directory, serverId, syncServicePath, getInitialDocuments } =
+      options
     const accessToken = typeof getAccessToken === 'function' ? await getAccessToken(context.app) : ''
     const url = `${syncServerUrl}?accessToken=${accessToken}`
     const repo = createRepo(directory, {
       peerId: serverId as PeerId,
       network: [new BrowserWebSocketClientAdapter(url)]
     })
-    const rootDocumentId = await getRootDocumentId(directory, async () => {
-      const res = await fetch(`${syncServerUrl}${syncServicePath}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          query: {}
-        })
-      })
-      const info: SyncServiceInfo = await res.json()
 
-      return {
-        documents: [info]
-      }
+    if (typeof getInitialDocuments !== 'function') {
+      throw new Error('getInitialDocuments function has to be provided for server to server sync')
+    }
+
+    const rootDocumentId = await getRootDocumentId(directory, async () => {
+      const documents = await getInitialDocuments(context.app)
+
+      return { documents }
     })
     const rootDocument = await repo.find<RootDocument>(rootDocumentId as AnyDocumentId)
 
