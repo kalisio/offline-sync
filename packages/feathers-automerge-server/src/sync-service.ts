@@ -128,7 +128,8 @@ export class AutomergeSyncService {
         if (serviceData !== null) {
           const convertedData: unknown[] = JSON.parse(JSON.stringify(serviceData))
           const idField = service?.id || 'id'
-          const paginate = serviceOptions?.paginate || { default: 10, max: 10 }
+          const paginate = serviceOptions?.paginate ||
+            (service as any).options?.paginate || { default: 10, max: 10 }
 
           data.__meta[servicePath] = { idField, paginate }
           data[servicePath] = convertedData.reduce<Record<string, unknown>>(
